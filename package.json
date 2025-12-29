@@ -4,15 +4,17 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
-    "build": "prisma generate && prisma migrate dev --name init && prisma migrate deploy && next build",
+    "build": "prisma generate && prisma migrate deploy && next build",
     "start": "next start",
     "lint": "next lint",
     "prettier": "prettier --check .",
     "prettier:fix": "prettier --write .",
     "postinstall": "prisma generate",
     "db:migrate": "prisma migrate dev",
+    "db:push": "prisma db push",
     "db:seed": "tsx --env-file=.env prisma/seed.ts",
-    "db:setup": "prisma migrate dev && npm run db:seed"
+    "db:setup": "prisma migrate dev && npm run db:seed",
+    "db:sync": "prisma db push"
   },
   "prisma": {
     "seed": "tsx --env-file=.env prisma/seed.ts"
