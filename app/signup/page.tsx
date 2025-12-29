@@ -14,6 +14,7 @@ export default function SignupPage() {
   const [name, setName] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [verificationSent, setVerificationSent] = useState(false)
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
@@ -46,15 +47,76 @@ export default function SignupPage() {
       if (!response.ok) {
         setError(data.error || 'An error occurred')
       } else {
-        // Signup successful - redirect to home
-        router.push('/')
-        router.refresh()
+        // Signup successful - show verification message
+        if (data.requiresVerification) {
+          setVerificationSent(true)
+        } else {
+          // If no verification required (shouldn't happen), redirect to home
+          router.push('/')
+          router.refresh()
+        }
       }
     } catch (error) {
       setError('An error occurred during signup')
     } finally {
       setLoading(false)
     }
+  }
+
+  if (verificationSent) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
+        <div className="w-full max-w-md space-y-8 rounded-lg bg-white p-8 shadow-lg dark:bg-gray-900">
+          <div className="text-center">
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900">
+              <svg
+                className="h-8 w-8 text-blue-600 dark:text-blue-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                />
+              </svg>
+            </div>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+              Check Your Email
+            </h1>
+            <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+              We've sent a verification email to <strong>{email}</strong>
+            </p>
+            <p className="mt-4 text-sm text-gray-600 dark:text-gray-400">
+              Click the link in the email or enter the verification code to complete your registration.
+            </p>
+            <div className="mt-6 space-y-4">
+              <Button
+                onClick={() => router.push('/verify-email')}
+                className="w-full"
+              >
+                Go to Verification Page
+              </Button>
+              <Button
+                onClick={() => {
+                  setVerificationSent(false)
+                  setEmail('')
+                  setPassword('')
+                  setConfirmPassword('')
+                  setName('')
+                }}
+                variant="outline"
+                className="w-full"
+              >
+                Sign Up with Different Email
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (

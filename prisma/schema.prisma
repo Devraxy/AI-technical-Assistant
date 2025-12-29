@@ -27,16 +27,19 @@ model User {
   name          String?
   role          String         @default("user") // "user" or "admin"
   status        UserStatus     @default(active) // User account status
+  emailVerified Boolean        @default(false) // Email verification status
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
 
   // Relations
-  sessions           Session[]
-  conversations      Conversation[]
-  passwordResetTokens PasswordResetToken[]
+  sessions                Session[]
+  conversations          Conversation[]
+  passwordResetTokens    PasswordResetToken[]
+  emailVerificationTokens EmailVerificationToken[]
 
   @@index([email])
   @@index([status])
+  @@index([emailVerified])
 }
 
 // Server-side session model (backend-managed, no client tokens)
@@ -90,5 +93,22 @@ model PasswordResetToken {
 
   @@index([userId])
   @@index([token])
+  @@index([expiresAt])
+}
+
+// Email verification token model
+model EmailVerificationToken {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String   @unique
+  code      String?  // Optional 6-digit verification code
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  used      Boolean  @default(false)
+
+  @@index([userId])
+  @@index([token])
+  @@index([code])
   @@index([expiresAt])
 }

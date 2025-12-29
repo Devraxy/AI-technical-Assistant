@@ -31,6 +31,17 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Check if email is verified
+    if (!user.emailVerified) {
+      return NextResponse.json(
+        { 
+          error: 'Please verify your email address before logging in. Check your email for the verification link.',
+          requiresVerification: true 
+        },
+        { status: 403 }
+      )
+    }
+
     // Check user status - only active users can log in
     if (user.status === 'disabled') {
       return NextResponse.json(

@@ -59,6 +59,7 @@ export async function validateSession(sessionId: string): Promise<SessionUser | 
             name: true,
             role: true,
             status: true,
+            emailVerified: true,
           },
         },
       },
@@ -81,6 +82,11 @@ export async function validateSession(sessionId: string): Promise<SessionUser | 
     // Check if user is active (only active users can access the system)
     // Suspended and disabled users cannot access
     if (session.user.status !== 'active') {
+      return null
+    }
+
+    // Check if email is verified (only verified users can access)
+    if (!session.user.emailVerified) {
       return null
     }
 
