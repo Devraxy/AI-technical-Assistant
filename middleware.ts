@@ -10,10 +10,12 @@ export async function middleware(request: NextRequest) {
     '/signup',
     '/forgot-password',
     '/reset-password',
+    '/verify-email',
     '/api/auth/login',
     '/api/auth/signup',
     '/api/auth/forgot-password',
     '/api/auth/reset-password',
+    '/api/auth/verify-email',
   ]
   const isPublicPath = publicPaths.some(path => pathname.startsWith(path))
 

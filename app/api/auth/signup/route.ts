@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
-import { createSession, setSessionCookie } from '@/lib/session'
+import crypto from 'crypto'
+import { sendEmailVerification } from '@/lib/email'
 
 export const runtime = 'nodejs'
 
@@ -50,7 +51,14 @@ export async function POST(request: NextRequest) {
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10)
 
-    // Create new user
+    // Generate verification token
+    const verificationToken = crypto.randomBytes(32).toString('hex')
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000) // 24 hours
+
+    // Generate verification code (6 digits)
+    const verificationCode = Math.floor(100000 + Math.random() * 900000).toString()
+
+    // Create new user (email not verified yet)
     const user = await prisma.user.create({
       data: {
         email: email.toLowerCase(),
@@ -58,26 +66,41 @@ export async function POST(request: NextRequest) {
         name: name || null,
         role: 'user', // Default role is 'user'
         status: 'active', // New users are active by default
+        emailVerified: false, // Email not verified yet
+        emailVerificationTokens: {
+          create: {
+            token: verificationToken,
+            code: verificationCode,
+            expiresAt,
+          },
+        },
       },
     })
 
-    // Create server-side session
-    const sessionId = await createSession(user.id)
+    // Send verification email
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+    const verificationUrl = `${baseUrl}/verify-email?token=${verificationToken}&code=${verificationCode}`
 
-    // Set session cookie
-    await setSessionCookie(sessionId)
+    try {
+      await sendEmailVerification(
+        user.email,
+        verificationUrl,
+        verificationCode
+      )
+    } catch (emailError) {
+      // If email sending fails, we should still return success but log the error
+      console.error('Failed to send verification email:', emailError)
+      // Don't fail the signup - user can request a new verification email later
+    }
 
-    // Return user data (no password!)
+    // Return success - user needs to verify email before logging in
     return NextResponse.json({
       success: true,
-      user: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        role: user.role,
-      },
+      message: 'Account created successfully. Please check your email to verify your account.',
+      requiresVerification: true,
     })
   } catch (error) {
+    console.error('Signup error:', error)
     return NextResponse.json(
       { error: 'An error occurred during signup' },
       { status: 500 }
