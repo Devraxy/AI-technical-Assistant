@@ -35,7 +35,6 @@ import {
 } from "@/components/ui/breadcrumb";
 import { LogoutButton } from "@/components/logout-button";
 import { AdminLink } from "@/components/admin-link";
-import { MessagesSquare, Github } from "lucide-react";
 import Link from "next/link";
 
 // Error boundary to catch React errors and suppress extension errors
@@ -618,14 +617,7 @@ function AssistantContent() {
                   <SidebarMenuItem>
                     <SidebarMenuButton size="lg" asChild>
                       <Link href="/">
-                        <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
-                          <MessagesSquare className="size-4" />
-                        </div>
-                        <div className="mr-6 flex flex-col gap-0.5 leading-none">
-                          <span className="font-semibold">
-                            AI Assistant
-                          </span>
-                        </div>
+                        <img src="/logo.svg" alt="AI Assistant" className="h-full w-full object-contain" />
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -642,28 +634,6 @@ function AssistantContent() {
               />
             </SidebarContent>
             <SidebarRail />
-            <SidebarFooter className="border-t">
-              <SidebarMenu>
-                <SidebarMenuItem>
-                  <SidebarMenuButton size="lg" asChild>
-                    <Link
-                      href="https://github.com/assistant-ui/assistant-ui"
-                      target="_blank"
-                    >
-                      <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
-                        <Github className="size-4" />
-                      </div>
-                      <div className="flex flex-col gap-0.5 leading-none">
-                        <span className="font-semibold">
-                          GitHub
-                        </span>
-                        <span>View Source</span>
-                      </div>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              </SidebarMenu>
-            </SidebarFooter>
           </Sidebar>
           <SidebarInset>
             <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
@@ -671,16 +641,6 @@ function AssistantContent() {
               <Separator orientation="vertical" className="mr-2 h-4" />
               <Breadcrumb>
                 <BreadcrumbList>
-                  <BreadcrumbItem className="hidden md:block">
-                    <BreadcrumbLink
-                      href="https://www.assistant-ui.com/docs/getting-started"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      AI Assistant
-                    </BreadcrumbLink>
-                  </BreadcrumbItem>
-                  <BreadcrumbSeparator className="hidden md:block" />
                   <BreadcrumbItem>
                     <BreadcrumbPage>
                       {currentConversationId ? 'Conversation' : 'New Chat'}
