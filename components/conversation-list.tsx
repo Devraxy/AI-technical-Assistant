@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback, memo } from 'react'
 import { Button } from '@/components/ui/button'
 import { PlusIcon, MessageSquare, Trash2 } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -23,7 +23,7 @@ interface ConversationListProps {
   refreshTrigger?: number // Add refresh trigger prop
 }
 
-export function ConversationList({
+function ConversationListComponent({
   currentConversationId,
   onSelectConversation,
   onNewChat,
@@ -32,35 +32,8 @@ export function ConversationList({
   const [conversations, setConversations] = useState<Conversation[]>([])
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    fetchConversations()
-  }, [])
-
-  // Refresh when refreshTrigger changes (when new conversation is created)
-  useEffect(() => {
-    if (refreshTrigger !== undefined && refreshTrigger > 0) {
-      fetchConversations();
-    }
-  }, [refreshTrigger]);
-
-  // Also refresh when currentConversationId changes to ensure list is up to date
-  useEffect(() => {
-    if (currentConversationId) {
-      fetchConversations();
-    }
-  }, [currentConversationId])
-
-  // Expose refresh function to parent if needed
-  useEffect(() => {
-    // Auto-refresh conversations every 30 seconds to catch new ones
-    const interval = setInterval(() => {
-      fetchConversations()
-    }, 30000)
-
-    return () => clearInterval(interval)
-  }, [])
-
-  async function fetchConversations() {
+  // Memoize fetchConversations to avoid recreating on every render
+  const fetchConversations = useCallback(async () => {
     try {
       const response = await fetch('/api/conversations')
       if (response.ok) {
@@ -72,7 +45,32 @@ export function ConversationList({
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
+
+  // Initial load
+  useEffect(() => {
+    fetchConversations()
+  }, [fetchConversations])
+
+  // Refresh when refreshTrigger changes (when new conversation is created or deleted)
+  useEffect(() => {
+    if (refreshTrigger !== undefined && refreshTrigger > 0) {
+      fetchConversations();
+    }
+  }, [refreshTrigger, fetchConversations]);
+
+  // REMOVED: No need to refetch when currentConversationId changes
+  // The list doesn't need to update just because user selected a different conversation
+
+  // Auto-refresh conversations every 30 seconds to catch new ones
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetchConversations()
+    }, 30000)
+
+    return () => clearInterval(interval)
+  }, [fetchConversations])
+
 
   async function deleteConversation(conversationId: string, event: React.MouseEvent) {
     event.stopPropagation() // Prevent selecting the conversation
@@ -87,12 +85,16 @@ export function ConversationList({
       })
 
       if (response.ok) {
+        // Optimistically update UI
         setConversations(conversations.filter(c => c.id !== conversationId))
 
         // If deleting the current conversation, start a new chat
         if (conversationId === currentConversationId) {
           onNewChat()
         }
+        
+        // Refresh from server to ensure consistency (but don't show loading)
+        fetchConversations()
       } else {
         alert('Failed to delete conversation')
       }
@@ -194,3 +196,15 @@ export function ConversationList({
     </div>
   )
 }
+
+// Memoize the component to prevent unnecessary re-renders
+// Only re-render when props actually change
+export const ConversationList = memo(ConversationListComponent, (prevProps, nextProps) => {
+  // Return true if props are equal (skip re-render), false if different (re-render)
+  return (
+    prevProps.currentConversationId === nextProps.currentConversationId &&
+    prevProps.refreshTrigger === nextProps.refreshTrigger &&
+    prevProps.onSelectConversation === nextProps.onSelectConversation &&
+    prevProps.onNewChat === nextProps.onNewChat
+  )
+})

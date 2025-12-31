@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useMemo, Component, ErrorInfo, ReactNode } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback, Component, ErrorInfo, ReactNode, memo } from "react";
 import { Thread } from "@/components/assistant-ui/thread";
 import {
   AssistantChatTransport,
@@ -35,6 +35,7 @@ import {
 } from "@/components/ui/breadcrumb";
 import { LogoutButton } from "@/components/logout-button";
 import { AdminLink } from "@/components/admin-link";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import Link from "next/link";
 
 // Error boundary to catch React errors and suppress extension errors
@@ -170,17 +171,99 @@ function AssistantContent() {
     }
   }, [currentConversationId])
 
+  // Optimized message transformation function
+  const transformMessage = useCallback((msg: any): any | null => {
+    // Fast validation
+    if (!msg?.role || msg?.content === undefined) return null;
+    
+    // Handle content - might be string, array, or need parsing
+    let contentArray: any[] | null = null;
+    
+    if (Array.isArray(msg.content)) {
+      contentArray = msg.content;
+    } else if (typeof msg.content === 'string') {
+      const trimmed = msg.content.trim();
+      // Quick check before parsing JSON
+      if (trimmed.startsWith('[') || trimmed.startsWith('{')) {
+        try {
+          const parsed = JSON.parse(trimmed);
+          if (Array.isArray(parsed)) {
+            contentArray = parsed;
+          }
+        } catch {
+          // Not JSON, treat as plain text
+          contentArray = null;
+        }
+      }
+    }
+    
+    // Handle both text and multimodal content (text + images)
+    if (contentArray && Array.isArray(contentArray)) {
+      const parts: any[] = [];
+      
+      for (const part of contentArray) {
+        // Handle text parts
+        if (part?.type === 'text' && part.text !== undefined) {
+          const text = String(part.text).trim();
+          if (text) {
+            parts.push({ type: 'text' as const, text });
+          }
+        } 
+        // Handle image_url format
+        else if (part?.type === 'image_url' && part.image_url?.url) {
+          const imageUrl = part.image_url.url;
+          const mediaType = imageUrl.startsWith('data:') 
+            ? imageUrl.substring(5, imageUrl.indexOf(';')) 
+            : 'image/png';
+          parts.push({ type: 'file' as const, url: imageUrl, mediaType });
+        }
+        // Handle image format
+        else if (part?.type === 'image' && (part.image || part.url)) {
+          const imageUrl = part.image || part.url;
+          const mediaType = imageUrl.startsWith('data:') 
+            ? imageUrl.substring(5, imageUrl.indexOf(';')) 
+            : 'image/png';
+          parts.push({ type: 'file' as const, url: imageUrl, mediaType });
+        }
+        // Handle file format (already correct)
+        else if (part?.type === 'file' && part.url) {
+          parts.push(part);
+        }
+      }
+      
+      if (parts.length === 0) return null;
+      
+      return {
+        id: msg.id || `msg-${Date.now()}-${Math.random()}`,
+        role: msg.role as 'user' | 'assistant',
+        parts,
+      };
+    } 
+    // Handle plain string content
+    else if (typeof msg.content === 'string') {
+      const content = msg.content.trim();
+      if (!content) return null;
+      
+      return {
+        id: msg.id || `msg-${Date.now()}-${Math.random()}`,
+        role: msg.role as 'user' | 'assistant',
+        parts: [{ type: 'text' as const, text: content }],
+      };
+    }
+    
+    return null;
+  }, []);
+
   // STEP 1: Load conversation history from database when conversation changes
   useEffect(() => {
     // Reset state when conversation changes
     setInitialMessages([]);
     setMessagesLoadedIntoRuntime(false);
-    setMessagesLoadedIntoRuntime(false);
     
     async function loadConversationHistory() {
       if (!currentConversationId) {
         setIsLoadingHistory(false);
-        setMessagesLoadedIntoRuntime(true); // Allow rendering empty state
+        setMessagesLoadedIntoRuntime(true);
         return;
       }
 
@@ -191,136 +274,19 @@ function AssistantContent() {
         const response = await fetch(`/api/conversations/${currentConversationId}/messages`);
         if (response.ok) {
           const data = await response.json();
+          const messages = data.messages || [];
           
-          // Transform messages to format expected by assistant-ui (optimized)
-          // Pre-allocate array for better performance
+          // Process messages efficiently - optimized synchronous processing
+          // The transformMessage function is already optimized, so we can process all at once
           const formattedMessages: any[] = [];
-          
-          for (const msg of data.messages || []) {
-            // Fast validation
-            if (!msg?.role || msg?.content === undefined) continue;
-            
-            
-            // Extract content efficiently
-            let content: string = '';
-            
-            // Handle content - might be string, array, or need parsing
-            let contentArray: any[] | null = null;
-            
-            if (Array.isArray(msg.content)) {
-              contentArray = msg.content;
-            } else if (typeof msg.content === 'string') {
-              // Try to parse as JSON if it looks like JSON
-              if (msg.content.trim().startsWith('[') || msg.content.trim().startsWith('{')) {
-                try {
-                  const parsed = JSON.parse(msg.content);
-                  if (Array.isArray(parsed)) {
-                    contentArray = parsed;
-                  }
-                } catch (e) {
-                  // Not JSON, treat as plain text
-                  contentArray = null;
-                }
-              }
-            }
-            
-            // Handle both text and multimodal content (text + images)
-            if (contentArray && Array.isArray(contentArray)) {
-              // Extract all parts (text and images)
-              const parts: any[] = [];
-              let hasText = false;
-              
-              for (const part of contentArray) {
-                // Handle text parts
-                if (part?.type === 'text' && part.text !== undefined) {
-                  const text = String(part.text).trim();
-                  if (text) {
-                    parts.push({
-                      type: 'text' as const,
-                      text: text,
-                    });
-                    hasText = true;
-                  }
-                } 
-                // Handle image_url format (from API/database)
-                // Convert to 'file' type format that assistant-ui expects
-                else if (part?.type === 'image_url' && part.image_url?.url) {
-                  // Include image parts when loading history
-                  // Use 'file' type with 'url' property (assistant-ui format)
-                  const imageUrl = part.image_url.url;
-                  if (imageUrl) {
-                    // Detect media type from data URL
-                    const mediaType = imageUrl.startsWith('data:') 
-                      ? imageUrl.substring(5, imageUrl.indexOf(';')) 
-                      : 'image/png';
-                    
-                    parts.push({
-                      type: 'file' as const,
-                      url: imageUrl,
-                      mediaType: mediaType,
-                    });
-                  }
-                }
-                // Handle image format (fallback - convert to file format)
-                else if (part?.type === 'image' && (part.image || part.url)) {
-                  const imageUrl = part.image || part.url;
-                  if (imageUrl) {
-                    // Detect media type from data URL
-                    const mediaType = imageUrl.startsWith('data:') 
-                      ? imageUrl.substring(5, imageUrl.indexOf(';')) 
-                      : 'image/png';
-                    
-                    parts.push({
-                      type: 'file' as const,
-                      url: imageUrl,
-                      mediaType: mediaType,
-                    });
-                  }
-                }
-                // Handle file format (already correct)
-                else if (part?.type === 'file' && part.url) {
-                  // Already in correct format, use as-is
-                  parts.push(part);
-                }
-                // Silently ignore unrecognized parts
-                else if (part && part.type) {
-                  // Unrecognized part type - skip
-                }
-              }
-              
-              // Only skip if there are no parts at all
-              if (parts.length === 0) continue;
-              
-              // Convert to AI SDK format with parts array (including images)
-              formattedMessages.push({
-                id: msg.id || `msg-${Date.now()}-${Math.random()}`,
-                role: msg.role as 'user' | 'assistant',
-                parts: parts,
-              });
-            } else if (typeof msg.content === 'string') {
-              content = msg.content.trim();
-              if (!content) continue;
-              
-              // Convert to AI SDK format with parts array
-              formattedMessages.push({
-                id: msg.id || `msg-${Date.now()}-${Math.random()}`,
-                role: msg.role as 'user' | 'assistant',
-                parts: [
-                  {
-                    type: 'text' as const,
-                    text: content,
-                  },
-                ],
-              });
-            } else {
-              continue;
+          for (const msg of messages) {
+            const transformed = transformMessage(msg);
+            if (transformed) {
+              formattedMessages.push(transformed);
             }
           }
-          
-          // Set messages - this will trigger Step 2
           setInitialMessages(formattedMessages);
         } else if (response.status === 404) {
-          // Conversation not found - clear it from localStorage and state
           if (typeof window !== 'undefined') {
             localStorage.removeItem('currentConversationId');
           }
@@ -340,25 +306,20 @@ function AssistantContent() {
     }
 
     loadConversationHistory();
-  }, [currentConversationId]);
+  }, [currentConversationId, transformMessage]);
 
-  // Handle conversation selection
-  function handleSelectConversation(conversationId: string) {
+  // Memoize handlers to prevent unnecessary re-renders
+  const handleSelectConversation = useCallback((conversationId: string) => {
     setCurrentConversationId(conversationId);
-  }
+  }, []);
 
   // Handle new chat - clear the current conversation
-  function handleNewChat() {
+  const handleNewChat = useCallback(() => {
     setCurrentConversationId(null);
-  }
+  }, []);
 
-
-  // Refresh conversation list when currentConversationId changes
-  useEffect(() => {
-    if (currentConversationId) {
-      setConversationListKey(prev => prev + 1);
-    }
-  }, [currentConversationId]);
+  // Only refresh conversation list when a new conversation is created, not when switching
+  // This is handled by the refreshTrigger in the new conversation detection useEffect below
 
   // Store runtime ref so fetch interceptor can access it
   const runtimeRef = useRef<any>(null);
@@ -626,7 +587,6 @@ function AssistantContent() {
             </SidebarHeader>
             <SidebarContent className="px-2">
               <ConversationList
-                key={conversationListKey}
                 currentConversationId={currentConversationId}
                 onSelectConversation={handleSelectConversation}
                 onNewChat={handleNewChat}
@@ -656,11 +616,11 @@ function AssistantContent() {
             <div className="flex-1 overflow-hidden">
               {isLoadingHistory || !messagesLoadedIntoRuntime ? (
                 <div className="flex h-full items-center justify-center">
-                  <div className="text-center">
-                    <p className="text-sm text-muted-foreground">
-                      {isLoadingHistory ? 'Loading conversation from database...' : 'Preparing messages...'}
-                    </p>
-                  </div>
+                  <LoadingSpinner 
+                    size="lg" 
+                    text={isLoadingHistory ? 'Loading conversation...' : 'Preparing messages...'}
+                    variant="default"
+                  />
                 </div>
               ) : (
                 <ErrorBoundary>
