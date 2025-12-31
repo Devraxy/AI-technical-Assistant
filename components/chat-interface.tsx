@@ -55,6 +55,38 @@ export function ChatInterface({ conversationId, onConversationCreated }: ChatInt
     }
   }, [])
 
+  // Load conversation function - must be declared before useEffect that uses it
+  const loadConversation = useCallback(async (id: string) => {
+    setLoadingMessages(true)
+    try {
+      const response = await fetch(`/api/conversations/${id}/messages`)
+      if (response.ok) {
+        const data = await response.json()
+        // Transform messages using optimized function
+        const transformedMessages = (data.messages || []).map(transformMessage)
+        setMessages(transformedMessages)
+      } else if (response.status === 404) {
+        // Conversation not found - clear it and start fresh
+        setMessages([])
+        if (onConversationCreated) {
+          // This will trigger the parent to clear the conversationId
+          localStorage.removeItem('currentConversationId')
+          window.location.reload()
+        }
+      } else {
+        if (process.env.NODE_ENV === 'development') {
+          console.error('Failed to load conversation')
+        }
+      }
+    } catch (error) {
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Error loading conversation:', error)
+      }
+    } finally {
+      setLoadingMessages(false)
+    }
+  }, [transformMessage, onConversationCreated])
+
   // Load messages when conversation changes
   useEffect(() => {
     if (conversationId) {
@@ -108,37 +140,6 @@ export function ChatInterface({ conversationId, onConversationCreated }: ChatInt
   function removeImage(index: number) {
     setSelectedImages(prev => prev.filter((_, i) => i !== index))
   }
-
-  const loadConversation = useCallback(async (id: string) => {
-    setLoadingMessages(true)
-    try {
-      const response = await fetch(`/api/conversations/${id}/messages`)
-      if (response.ok) {
-        const data = await response.json()
-        // Transform messages using optimized function
-        const transformedMessages = (data.messages || []).map(transformMessage)
-        setMessages(transformedMessages)
-      } else if (response.status === 404) {
-        // Conversation not found - clear it and start fresh
-        setMessages([])
-        if (onConversationCreated) {
-          // This will trigger the parent to clear the conversationId
-          localStorage.removeItem('currentConversationId')
-          window.location.reload()
-        }
-      } else {
-        if (process.env.NODE_ENV === 'development') {
-          console.error('Failed to load conversation')
-        }
-      }
-    } catch (error) {
-      if (process.env.NODE_ENV === 'development') {
-        console.error('Error loading conversation:', error)
-      }
-    } finally {
-      setLoadingMessages(false)
-    }
-  }, [transformMessage, onConversationCreated])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
