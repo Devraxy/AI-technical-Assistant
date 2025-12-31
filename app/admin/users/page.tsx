@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
+import { LoadingSpinner } from '@/components/ui/loading-spinner'
 import { ArrowLeft, UserCheck, UserX, Trash2 } from 'lucide-react'
 
 interface User {
@@ -112,10 +113,7 @@ export default function AdminUsersPage() {
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
-        <div className="text-center">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-gray-300 border-t-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading users...</p>
-        </div>
+        <LoadingSpinner size="lg" text="Loading users..." variant="default" />
       </div>
     )
   }

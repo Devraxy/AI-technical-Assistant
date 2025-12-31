@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo, memo } from 'react'
 import { Button } from '@/components/ui/button'
 import { ArrowUpIcon, Loader2, Square, ImageIcon, X } from 'lucide-react'
+import { LoadingSpinner } from '@/components/ui/loading-spinner'
 import ReactMarkdown from 'react-markdown'
 
 interface Message {
@@ -28,6 +29,64 @@ export function ChatInterface({ conversationId, onConversationCreated }: ChatInt
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
+  // Optimized message transformation
+  const transformMessage = useCallback((msg: any) => {
+    let images: string[] = []
+    let textContent = ''
+    
+    if (Array.isArray(msg.content)) {
+      const imageParts = msg.content.filter((part: any) => 
+        (part.type === 'image_url' && part.image_url?.url) ||
+        (part.type === 'image' && (part.image || part.url))
+      )
+      images = imageParts.map((part: any) => 
+        part.image_url?.url || part.image || part.url
+      )
+      const textPart = msg.content.find((p: any) => p.type === 'text')
+      textContent = textPart?.text || ''
+    } else if (typeof msg.content === 'string') {
+      textContent = msg.content
+    }
+    
+    return {
+      ...msg,
+      content: textContent,
+      images: images.length > 0 ? images : undefined
+    }
+  }, [])
+
+  // Load conversation function - must be declared before useEffect that uses it
+  const loadConversation = useCallback(async (id: string) => {
+    setLoadingMessages(true)
+    try {
+      const response = await fetch(`/api/conversations/${id}/messages`)
+      if (response.ok) {
+        const data = await response.json()
+        // Transform messages using optimized function
+        const transformedMessages = (data.messages || []).map(transformMessage)
+        setMessages(transformedMessages)
+      } else if (response.status === 404) {
+        // Conversation not found - clear it and start fresh
+        setMessages([])
+        if (onConversationCreated) {
+          // This will trigger the parent to clear the conversationId
+          localStorage.removeItem('currentConversationId')
+          window.location.reload()
+        }
+      } else {
+        if (process.env.NODE_ENV === 'development') {
+          console.error('Failed to load conversation')
+        }
+      }
+    } catch (error) {
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Error loading conversation:', error)
+      }
+    } finally {
+      setLoadingMessages(false)
+    }
+  }, [transformMessage, onConversationCreated])
+
   // Load messages when conversation changes
   useEffect(() => {
     if (conversationId) {
@@ -35,7 +94,7 @@ export function ChatInterface({ conversationId, onConversationCreated }: ChatInt
     } else {
       setMessages([])
     }
-  }, [conversationId])
+  }, [conversationId, loadConversation])
 
   // Auto-scroll to bottom when messages change
   useEffect(() => {
@@ -80,64 +139,6 @@ export function ChatInterface({ conversationId, onConversationCreated }: ChatInt
   // Remove an image from selection
   function removeImage(index: number) {
     setSelectedImages(prev => prev.filter((_, i) => i !== index))
-  }
-
-  async function loadConversation(id: string) {
-    setLoadingMessages(true)
-    try {
-      const response = await fetch(`/api/conversations/${id}/messages`)
-      if (response.ok) {
-        const data = await response.json()
-        // Transform messages to include images if they exist in content
-        const transformedMessages = (data.messages || []).map((msg: any) => {
-          let images: string[] = []
-          let textContent = ''
-          
-          // Check if content is an array (multimodal format)
-          if (Array.isArray(msg.content)) {
-            // Extract images
-            const imageParts = msg.content.filter((part: any) => 
-              (part.type === 'image_url' && part.image_url?.url) ||
-              (part.type === 'image' && (part.image || part.url))
-            )
-            images = imageParts.map((part: any) => 
-              part.image_url?.url || part.image || part.url
-            )
-            
-            // Extract text
-            const textPart = msg.content.find((p: any) => p.type === 'text')
-            textContent = textPart?.text || ''
-          } else if (typeof msg.content === 'string') {
-            textContent = msg.content
-          }
-          
-          return {
-            ...msg,
-            content: textContent,
-            images: images.length > 0 ? images : undefined
-          }
-        })
-        setMessages(transformedMessages)
-      } else if (response.status === 404) {
-        // Conversation not found - clear it and start fresh
-        setMessages([])
-        if (onConversationCreated) {
-          // This will trigger the parent to clear the conversationId
-          localStorage.removeItem('currentConversationId')
-          window.location.reload()
-        }
-      } else {
-        if (process.env.NODE_ENV === 'development') {
-          console.error('Failed to load conversation')
-        }
-      }
-    } catch (error) {
-      if (process.env.NODE_ENV === 'development') {
-        console.error('Error loading conversation:', error)
-      }
-    } finally {
-      setLoadingMessages(false)
-    }
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -410,10 +411,7 @@ export function ChatInterface({ conversationId, onConversationCreated }: ChatInt
   if (loadingMessages) {
     return (
       <div className="flex h-full items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
-          <p className="mt-4 text-sm text-muted-foreground">Loading conversation...</p>
-        </div>
+        <LoadingSpinner size="lg" text="Loading conversation..." variant="default" />
       </div>
     )
   }
