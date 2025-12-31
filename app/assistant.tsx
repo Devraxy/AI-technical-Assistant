@@ -636,4 +636,4 @@ function AssistantContent() {
   );
 }
 
-export const Assistant = AssistantContent;
+export { AssistantContent as Assistant };
