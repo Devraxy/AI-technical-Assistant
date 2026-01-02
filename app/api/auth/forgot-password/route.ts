@@ -100,7 +100,7 @@ export async function POST(request: NextRequest) {
     // Return success (don't reveal if user exists)
     return NextResponse.json({
       success: true,
-      message: 'If an account with that email exists, we\'ve sent you a password reset link.',
+      message: 'Si un compte avec cet email existe, nous vous avons envoyé un lien de réinitialisation de mot de passe.',
     })
   } catch (error) {
     console.error('Error in forgot-password:', error)

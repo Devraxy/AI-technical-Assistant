@@ -125,9 +125,9 @@ async function sendEmail(options: {
     } catch (error) {
       console.error('Error sending email via Resend:', error)
       if (error instanceof Error) {
-        throw new Error(`Failed to send email: ${error.message}`)
+        throw new Error(`Échec de l'envoi de l'email : ${error.message}`)
       }
-      throw new Error('Failed to send email. Please try again later.')
+      throw new Error('Échec de l\'envoi de l\'email. Veuillez réessayer plus tard.')
     }
   }
 
@@ -166,14 +166,14 @@ async function sendEmail(options: {
     if (error instanceof Error) {
       if (error.message.includes('Email configuration is missing')) {
         console.error('\n' + error.message + '\n')
-        throw new Error('Email service is not configured. Please contact the administrator or check server logs for configuration details.')
+        throw new Error('Le service email n\'est pas configuré. Veuillez contacter l\'administrateur ou vérifier les logs du serveur pour les détails de configuration.')
       }
       
       console.error('Full error details:', error)
-      throw new Error(`Failed to send email: ${error.message}`)
+      throw new Error(`Échec de l'envoi de l'email : ${error.message}`)
     }
     
-    throw new Error('Failed to send email. Please try again later.')
+    throw new Error('Échec de l\'envoi de l\'email. Veuillez réessayer plus tard.')
   }
 }
 
@@ -191,24 +191,24 @@ export async function sendEmailVerification(
         <head>
           <meta charset="utf-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>Verify Your Email</title>
+          <title>Vérifiez votre email</title>
         </head>
         <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
           <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-            <h1 style="color: white; margin: 0;">Verify Your Email</h1>
+            <h1 style="color: white; margin: 0;">Vérifiez votre email</h1>
           </div>
           <div style="background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; border: 1px solid #e0e0e0;">
-            <p style="font-size: 16px; margin-bottom: 20px;">Hello,</p>
+            <p style="font-size: 16px; margin-bottom: 20px;">Bonjour,</p>
             <p style="font-size: 16px; margin-bottom: 20px;">
-              Thank you for signing up for ${appName}! Please verify your email address to complete your registration.
+              Merci de vous être inscrit à ${appName} ! Veuillez vérifier votre adresse email pour compléter votre inscription.
             </p>
             ${verificationCode ? `
             <div style="background: #fff; border: 2px solid #667eea; border-radius: 8px; padding: 20px; margin: 20px 0; text-align: center;">
-              <p style="font-size: 14px; color: #666; margin-bottom: 10px;">Your verification code:</p>
+              <p style="font-size: 14px; color: #666; margin-bottom: 10px;">Votre code de vérification :</p>
               <p style="font-size: 32px; font-weight: bold; color: #667eea; letter-spacing: 8px; margin: 0;">${verificationCode}</p>
             </div>
             <p style="font-size: 14px; color: #666; margin-bottom: 20px;">
-              Enter this code on the verification page, or click the button below to verify automatically.
+              Entrez ce code sur la page de vérification, ou cliquez sur le bouton ci-dessous pour vérifier automatiquement.
             </p>
             ` : ''}
             <div style="text-align: center; margin: 30px 0;">
@@ -221,21 +221,21 @@ export async function sendEmailVerification(
                         font-weight: bold; 
                         display: inline-block;
                         box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-                Verify Email Address
+                Vérifier l'adresse email
               </a>
             </div>
             <p style="font-size: 14px; color: #666; margin-top: 30px;">
-              Or copy and paste this link into your browser:
+              Ou copiez et collez ce lien dans votre navigateur :
             </p>
             <p style="font-size: 12px; color: #667eea; word-break: break-all; background: #f0f0f0; padding: 10px; border-radius: 5px;">
               ${verificationUrl}
             </p>
             <p style="font-size: 14px; color: #666; margin-top: 30px;">
-              This link will expire in 24 hours. If you didn't create an account, please ignore this email.
+              Ce lien expirera dans 24 heures. Si vous n'avez pas créé de compte, veuillez ignorer cet email.
             </p>
             <hr style="border: none; border-top: 1px solid #e0e0e0; margin: 30px 0;">
             <p style="font-size: 12px; color: #999; text-align: center; margin: 0;">
-              This is an automated message. Please do not reply to this email.
+              Ceci est un message automatisé. Veuillez ne pas répondre à cet email.
             </p>
           </div>
         </body>
@@ -243,23 +243,23 @@ export async function sendEmailVerification(
     `
 
   const text = `
-    Verify Your Email
+    Vérifiez votre email
 
-    Hello,
+    Bonjour,
 
-    Thank you for signing up for ${appName}! Please verify your email address to complete your registration.
+    Merci de vous être inscrit à ${appName} ! Veuillez vérifier votre adresse email pour compléter votre inscription.
 
-    ${verificationCode ? `Your verification code: ${verificationCode}\n\n` : ''}Click the link below to verify your email:
+    ${verificationCode ? `Votre code de vérification : ${verificationCode}\n\n` : ''}Cliquez sur le lien ci-dessous pour vérifier votre email :
     ${verificationUrl}
 
-    This link will expire in 24 hours. If you didn't create an account, please ignore this email.
+    Ce lien expirera dans 24 heures. Si vous n'avez pas créé de compte, veuillez ignorer cet email.
 
-    This is an automated message. Please do not reply to this email.
+    Ceci est un message automatisé. Veuillez ne pas répondre à cet email.
   `
 
   await sendEmail({
     to: email,
-    subject: `Verify Your ${appName} Email`,
+    subject: `Vérifiez votre email ${appName}`,
     html,
     text,
   })
@@ -279,19 +279,19 @@ export async function sendPasswordResetEmail(
         <head>
           <meta charset="utf-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>Password Reset</title>
+          <title>Réinitialisation du mot de passe</title>
         </head>
         <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
           <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-            <h1 style="color: white; margin: 0;">Password Reset Request</h1>
+            <h1 style="color: white; margin: 0;">Demande de réinitialisation du mot de passe</h1>
           </div>
           <div style="background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; border: 1px solid #e0e0e0;">
-            <p style="font-size: 16px; margin-bottom: 20px;">Hello,</p>
+            <p style="font-size: 16px; margin-bottom: 20px;">Bonjour,</p>
             <p style="font-size: 16px; margin-bottom: 20px;">
-              We received a request to reset your password for your ${appName} account.
+              Nous avons reçu une demande de réinitialisation de mot de passe pour votre compte ${appName}.
             </p>
             <p style="font-size: 16px; margin-bottom: 30px;">
-              Click the button below to reset your password. This link will expire in 1 hour.
+              Cliquez sur le bouton ci-dessous pour réinitialiser votre mot de passe. Ce lien expirera dans 1 heure.
             </p>
             <div style="text-align: center; margin: 30px 0;">
               <a href="${resetUrl}" 
@@ -303,21 +303,21 @@ export async function sendPasswordResetEmail(
                         font-weight: bold; 
                         display: inline-block;
                         box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-                Reset Password
+                Réinitialiser le mot de passe
               </a>
             </div>
             <p style="font-size: 14px; color: #666; margin-top: 30px;">
-              Or copy and paste this link into your browser:
+              Ou copiez et collez ce lien dans votre navigateur :
             </p>
             <p style="font-size: 12px; color: #667eea; word-break: break-all; background: #f0f0f0; padding: 10px; border-radius: 5px;">
               ${resetUrl}
             </p>
             <p style="font-size: 14px; color: #666; margin-top: 30px;">
-              If you didn't request this password reset, please ignore this email. Your password will remain unchanged.
+              Si vous n'avez pas demandé cette réinitialisation de mot de passe, veuillez ignorer cet email. Votre mot de passe restera inchangé.
             </p>
             <hr style="border: none; border-top: 1px solid #e0e0e0; margin: 30px 0;">
             <p style="font-size: 12px; color: #999; text-align: center; margin: 0;">
-              This is an automated message. Please do not reply to this email.
+              Ceci est un message automatisé. Veuillez ne pas répondre à cet email.
             </p>
           </div>
         </body>
@@ -325,24 +325,24 @@ export async function sendPasswordResetEmail(
     `
 
   const text = `
-    Password Reset Request
+    Demande de réinitialisation du mot de passe
 
-    Hello,
+    Bonjour,
 
-    We received a request to reset your password for your ${appName} account.
+    Nous avons reçu une demande de réinitialisation de mot de passe pour votre compte ${appName}.
 
-    Click the link below to reset your password. This link will expire in 1 hour.
+    Cliquez sur le lien ci-dessous pour réinitialiser votre mot de passe. Ce lien expirera dans 1 heure.
 
     ${resetUrl}
 
-    If you didn't request this password reset, please ignore this email. Your password will remain unchanged.
+    Si vous n'avez pas demandé cette réinitialisation de mot de passe, veuillez ignorer cet email. Votre mot de passe restera inchangé.
 
-    This is an automated message. Please do not reply to this email.
+    Ceci est un message automatisé. Veuillez ne pas répondre à cet email.
   `
 
   await sendEmail({
     to: email,
-    subject: `Reset Your ${appName} Password`,
+    subject: `Réinitialisez votre mot de passe ${appName}`,
     html,
     text,
   })

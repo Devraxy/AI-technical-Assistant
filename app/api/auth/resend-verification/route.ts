@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
     // Validate input
     if (!email) {
       return NextResponse.json(
-        { error: 'Email is required' },
+        { error: 'L\'email est requis' },
         { status: 400 }
       )
     }
@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     if (!emailRegex.test(email)) {
       return NextResponse.json(
-        { error: 'Invalid email format' },
+        { error: 'Format d\'email invalide' },
         { status: 400 }
       )
     }
@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
       // Return success to prevent email enumeration
       return NextResponse.json({
         success: true,
-        message: 'If an account with that email exists and is unverified, we\'ve sent you a verification link.',
+        message: 'Si un compte avec cet email existe et n\'est pas vérifié, nous vous avons envoyé un lien de vérification.',
       })
     }
 
@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
     if (user.emailVerified) {
       return NextResponse.json({
         success: true,
-        message: 'Your email is already verified. You can log in now.',
+        message: 'Votre email est déjà vérifié. Vous pouvez vous connecter maintenant.',
         alreadyVerified: true,
       })
     }
@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
       // Still return success to prevent account enumeration
       return NextResponse.json({
         success: true,
-        message: 'If an account with that email exists and is unverified, we\'ve sent you a verification link.',
+        message: 'Si un compte avec cet email existe et n\'est pas vérifié, nous vous avons envoyé un lien de vérification.',
       })
     }
 
@@ -107,7 +107,7 @@ export async function POST(request: NextRequest) {
       
       console.error('Failed to send verification email:', emailError)
       return NextResponse.json(
-        { error: 'Failed to send verification email. Please try again later.' },
+        { error: 'Échec de l\'envoi de l\'email de vérification. Veuillez réessayer plus tard.' },
         { status: 500 }
       )
     }
@@ -115,12 +115,12 @@ export async function POST(request: NextRequest) {
     // Return success (don't reveal if user exists)
     return NextResponse.json({
       success: true,
-      message: 'If an account with that email exists and is unverified, we\'ve sent you a verification link.',
+      message: 'Si un compte avec cet email existe et n\'est pas vérifié, nous vous avons envoyé un lien de vérification.',
     })
   } catch (error) {
     console.error('Error in resend-verification:', error)
     return NextResponse.json(
-      { error: 'An error occurred. Please try again later.' },
+      { error: 'Une erreur s\'est produite. Veuillez réessayer plus tard.' },
       { status: 500 }
     )
   }

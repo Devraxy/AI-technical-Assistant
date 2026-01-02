@@ -1,93 +1,93 @@
-This is the [assistant-ui](https://github.com/Yonom/assistant-ui) starter project.
+Ceci est le projet de démarrage [assistant-ui](https://github.com/Yonom/assistant-ui).
 
-## Getting Started
+## Démarrage
 
-### Environment Variables
+### Variables d'environnement
 
-Create a `.env.local` file (or `.env` for production) with the following required variables:
+Créez un fichier `.env.local` (ou `.env` pour la production) avec les variables requises suivantes :
 
-#### Required Variables
+#### Variables requises
 
 ```bash
-# Database Configuration (Required)
+# Configuration de la base de données (Requis)
 DATABASE_URL="postgresql://user:password@localhost:5432/database_name?schema=public"
 
-# OpenAI API Key (Required)
+# Clé API OpenAI (Requis)
 OPENAI_API_KEY=sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 ```
 
-#### Optional Variables
+#### Variables optionnelles
 
 ```bash
-# Application Configuration
-APP_NAME="AI Assistant"
+# Configuration de l'application
+APP_NAME="Assistant IA"
 NEXT_PUBLIC_APP_URL=http://localhost:3000
 
-# Email Configuration (Required for email verification and password reset)
-# Choose ONE of the following options:
+# Configuration email (Requis pour la vérification d'email et la réinitialisation de mot de passe)
+# Choisissez UNE des options suivantes :
 
-# Option 1: Resend (Recommended - Free tier available)
-# Get your API key at: https://resend.com/api-keys
+# Option 1 : Resend (Recommandé - Niveau gratuit disponible)
+# Obtenez votre clé API sur : https://resend.com/api-keys
 RESEND_API_KEY=re_xxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-EMAIL_FROM="AI Assistant <onboarding@resend.dev>"
-# Note: Update the email address above to your verified domain in Resend
+EMAIL_FROM="Assistant IA <onboarding@resend.dev>"
+# Note : Mettez à jour l'adresse email ci-dessus avec votre domaine vérifié dans Resend
 
-# Option 2: SMTP
+# Option 2 : SMTP
 SMTP_HOST=smtp.example.com
 SMTP_PORT=587
 SMTP_SECURE=false
 SMTP_USER=your-email@example.com
 SMTP_PASSWORD=your-password
-EMAIL_FROM="AI Assistant <noreply@example.com>"
+EMAIL_FROM="Assistant IA <noreply@example.com>"
 
-# Option 3: Gmail
+# Option 3 : Gmail
 GMAIL_USER=your-email@gmail.com
 GMAIL_APP_PASSWORD=your-app-password
-EMAIL_FROM="AI Assistant <your-email@gmail.com>"
+EMAIL_FROM="Assistant IA <your-email@gmail.com>"
 ```
 
-**Note for Gmail:** You need to enable 2-Step Verification and generate an App Password from [Google Account Settings](https://myaccount.google.com/apppasswords).
+**Note pour Gmail :** Vous devez activer la vérification en deux étapes et générer un mot de passe d'application depuis les [Paramètres du compte Google](https://myaccount.google.com/apppasswords).
 
-**Note for Resend:** Sign up at [resend.com](https://resend.com) to get a free API key. The free tier includes 3,000 emails/month and 100 emails/day.
+**Note pour Resend :** Inscrivez-vous sur [resend.com](https://resend.com) pour obtenir une clé API gratuite. Le niveau gratuit comprend 3 000 emails/mois et 100 emails/jour.
 
-### Setup Steps
+### Étapes de configuration
 
-1. **Set up your database:**
+1. **Configurez votre base de données :**
 
    ```bash
-   # Run migrations
+   # Exécutez les migrations
    npm run db:migrate
 
-   # (Optional) Seed the database
+   # (Optionnel) Remplissez la base de données
    npm run db:seed
    ```
 
-2. **Configure environment variables** (see above)
+2. **Configurez les variables d'environnement** (voir ci-dessus)
 
-3. **Run the development server:**
+3. **Lancez le serveur de développement :**
 
 ```bash
 npm run dev
-# or
+# ou
 yarn dev
-# or
+# ou
 pnpm dev
-# or
+# ou
 bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Ouvrez [http://localhost:3000](http://localhost:3000) dans votre navigateur pour voir le résultat.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Vous pouvez commencer à modifier la page en modifiant `app/page.tsx`. La page se met à jour automatiquement lorsque vous modifiez le fichier.
 
-## Features
+## Fonctionnalités
 
-### Email Verification
+### Vérification d'email
 
-New users must verify their email address before they can log in. After signing up:
+Les nouveaux utilisateurs doivent vérifier leur adresse email avant de pouvoir se connecter. Après l'inscription :
 
-1. Users receive a verification email with a link and a 6-digit code
-2. They can click the link or enter the code on the verification page
-3. Once verified, they are automatically logged in
+1. Les utilisateurs reçoivent un email de vérification avec un lien et un code à 6 chiffres
+2. Ils peuvent cliquer sur le lien ou entrer le code sur la page de vérification
+3. Une fois vérifiés, ils sont automatiquement connectés
 
-The verification link expires after 24 hours. Users can request a new verification email if needed.
+Le lien de vérification expire après 24 heures. Les utilisateurs peuvent demander un nouvel email de vérification si nécessaire.
