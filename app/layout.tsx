@@ -16,8 +16,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Application Assistant IA",
-  description: "Application d'assistant IA développée avec assistant-ui",
+  title: "Hasie AI",
+  description: "Application d'assistant IA développée par Hasie Group",
 };
 
 export default function RootLayout({
