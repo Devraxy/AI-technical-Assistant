@@ -39,7 +39,7 @@ export function AdminLink() {
       onClick={() => router.push('/admin/users')}
     >
       <Settings className="h-4 w-4" />
-      Admin Panel
+      Panneau d'administration
     </Button>
   )
 }

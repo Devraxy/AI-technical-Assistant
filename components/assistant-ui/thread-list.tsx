@@ -27,7 +27,7 @@ const ThreadListNew: FC = () => {
         variant="ghost"
       >
         <PlusIcon />
-        New Thread
+        Nouveau fil
       </Button>
     </ThreadListPrimitive.New>
   );
@@ -50,7 +50,7 @@ const ThreadListSkeleton: FC = () => {
         <div
           key={i}
           role="status"
-          aria-label="Loading threads"
+          aria-label="Chargement des fils"
           aria-live="polite"
           className="aui-thread-list-skeleton-wrapper flex items-center gap-2 rounded-md px-3 py-2"
         >
@@ -75,7 +75,7 @@ const ThreadListItem: FC = () => {
 const ThreadListItemTitle: FC = () => {
   return (
     <span className="aui-thread-list-item-title text-sm">
-      <ThreadListItemPrimitive.Title fallback="New Chat" />
+      <ThreadListItemPrimitive.Title fallback="Nouvelle conversation" />
     </span>
   );
 };
@@ -86,7 +86,7 @@ const ThreadListItemArchive: FC = () => {
       <TooltipIconButton
         className="aui-thread-list-item-archive mr-3 ml-auto size-4 p-0 text-foreground hover:text-primary"
         variant="ghost"
-        tooltip="Archive thread"
+        tooltip="Archiver le fil"
       >
         <ArchiveIcon />
       </TooltipIconButton>

@@ -14,7 +14,7 @@ export const ToolFallback: ToolCallMessagePartComponent = ({
       <div className="aui-tool-fallback-header flex items-center gap-2 px-4">
         <CheckIcon className="aui-tool-fallback-icon size-4" />
         <p className="aui-tool-fallback-title flex-grow">
-          Used tool: <b>{toolName}</b>
+          Outil utilisé : <b>{toolName}</b>
         </p>
         <Button onClick={() => setIsCollapsed(!isCollapsed)}>
           {isCollapsed ? <ChevronUpIcon /> : <ChevronDownIcon />}
@@ -30,7 +30,7 @@ export const ToolFallback: ToolCallMessagePartComponent = ({
           {result !== undefined && (
             <div className="aui-tool-fallback-result-root border-t border-dashed px-4 pt-2">
               <p className="aui-tool-fallback-result-header font-semibold">
-                Result:
+                Résultat :
               </p>
               <pre className="aui-tool-fallback-result-content whitespace-pre-wrap">
                 {typeof result === "string"

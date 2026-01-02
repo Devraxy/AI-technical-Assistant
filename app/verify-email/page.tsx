@@ -40,7 +40,7 @@ function VerifyEmailContent() {
       const data = await response.json()
 
       if (!response.ok) {
-        setError(data.error || 'Verification failed')
+        setError(data.error || 'Échec de la vérification')
         setMode('code') // Switch to code mode if link fails
       } else {
         setSuccess(true)
@@ -51,7 +51,7 @@ function VerifyEmailContent() {
         }, 2000)
       }
     } catch (error) {
-      setError('An error occurred during verification')
+      setError('Une erreur s\'est produite lors de la vérification')
       setMode('code') // Switch to code mode on error
     } finally {
       setVerifying(false)
@@ -64,13 +64,13 @@ function VerifyEmailContent() {
     setError('')
 
     if (!code || code.length !== 6) {
-      setError('Please enter a valid 6-digit code')
+      setError('Veuillez entrer un code à 6 chiffres valide')
       setVerifying(false)
       return
     }
 
     if (!email) {
-      setError('Please enter your email address')
+      setError('Veuillez entrer votre adresse email')
       setVerifying(false)
       return
     }
@@ -87,7 +87,7 @@ function VerifyEmailContent() {
       const data = await response.json()
 
       if (!response.ok) {
-        setError(data.error || 'Verification failed')
+        setError(data.error || 'Échec de la vérification')
       } else {
         setSuccess(true)
         // Redirect to home after a short delay
@@ -97,7 +97,7 @@ function VerifyEmailContent() {
         }, 2000)
       }
     } catch (error) {
-      setError('An error occurred during verification')
+      setError('Une erreur s\'est produite lors de la vérification')
     } finally {
       setVerifying(false)
     }
@@ -124,10 +124,10 @@ function VerifyEmailContent() {
               </svg>
             </div>
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-              Email Verified!
+              Email vérifié !
             </h1>
             <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-              Your email has been successfully verified. Redirecting...
+              Votre email a été vérifié avec succès. Redirection...
             </p>
           </div>
         </div>
@@ -140,12 +140,12 @@ function VerifyEmailContent() {
       <div className="w-full max-w-md space-y-8 rounded-lg bg-white p-8 shadow-lg dark:bg-gray-900">
         <div className="text-center">
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-            Verify Your Email
+            Vérifiez votre email
           </h1>
           <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
             {mode === 'link'
-              ? 'Verifying your email...'
-              : 'Enter the verification code sent to your email'}
+              ? 'Vérification de votre email...'
+              : 'Entrez le code de vérification envoyé à votre email'}
           </p>
         </div>
 
@@ -157,7 +157,7 @@ function VerifyEmailContent() {
                   htmlFor="email"
                   className="block text-sm font-medium text-gray-700 dark:text-gray-300"
                 >
-                  Email Address
+                  Adresse email
                 </label>
                 <Input
                   id="email"
@@ -177,7 +177,7 @@ function VerifyEmailContent() {
                   htmlFor="code"
                   className="block text-sm font-medium text-gray-700 dark:text-gray-300"
                 >
-                  Verification Code
+                  Code de vérification
                 </label>
                 <Input
                   id="code"
@@ -192,7 +192,7 @@ function VerifyEmailContent() {
                   pattern="[0-9]{6}"
                 />
                 <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                  Enter the 6-digit code from your email
+                  Entrez le code à 6 chiffres de votre email
                 </p>
               </div>
             </div>
@@ -208,7 +208,7 @@ function VerifyEmailContent() {
               disabled={verifying}
               className="w-full"
             >
-              {verifying ? 'Verifying...' : 'Verify Email'}
+              {verifying ? 'Vérification...' : 'Vérifier l\'email'}
             </Button>
           </form>
         )}
@@ -217,7 +217,7 @@ function VerifyEmailContent() {
           <div className="text-center">
             <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-blue-600 border-r-transparent"></div>
             <p className="mt-4 text-sm text-gray-600 dark:text-gray-400">
-              Verifying your email address...
+              Vérification de votre adresse email...
             </p>
           </div>
         )}
@@ -230,19 +230,19 @@ function VerifyEmailContent() {
               variant="outline"
               className="mt-4 w-full"
             >
-              Verify with Code Instead
+              Vérifier avec le code à la place
             </Button>
           </div>
         )}
 
         <div className="mt-4 text-center text-sm text-gray-600 dark:text-gray-400">
           <p>
-            Didn't receive the email?{' '}
+            Vous n'avez pas reçu l'email ?{' '}
             <Link
               href="/signup"
               className="font-medium text-blue-600 hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300"
             >
-              Sign up again
+              S'inscrire à nouveau
             </Link>
           </p>
         </div>
@@ -259,7 +259,7 @@ export default function VerifyEmailPage() {
           <div className="text-center">
             <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-blue-600 border-r-transparent"></div>
             <p className="mt-4 text-sm text-gray-600 dark:text-gray-400">
-              Loading...
+              Chargement...
             </p>
           </div>
         </div>

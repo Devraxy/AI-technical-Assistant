@@ -35,7 +35,7 @@ export async function GET(
 
     if (!conversation) {
       return NextResponse.json(
-        { error: 'Conversation not found' },
+        { error: 'Conversation introuvable' },
         { status: 404 }
       )
     }
@@ -43,10 +43,10 @@ export async function GET(
     return NextResponse.json({ conversation })
   } catch (error: any) {
     if (error.message === 'Unauthorized') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
     }
     return NextResponse.json(
-      { error: 'Failed to fetch conversation' },
+      { error: 'Échec de la récupération de la conversation' },
       { status: 500 }
     )
   }
@@ -73,7 +73,7 @@ export async function DELETE(
 
     if (!conversation) {
       return NextResponse.json(
-        { error: 'Conversation not found' },
+        { error: 'Conversation introuvable' },
         { status: 404 }
       )
     }
@@ -86,10 +86,10 @@ export async function DELETE(
     return NextResponse.json({ success: true })
   } catch (error: any) {
     if (error.message === 'Unauthorized') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
     }
     return NextResponse.json(
-      { error: 'Failed to delete conversation' },
+      { error: 'Échec de la suppression de la conversation' },
       { status: 500 }
     )
   }

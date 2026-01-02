@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
     // Validate input
     if (!email) {
       return NextResponse.json(
-        { error: 'Email is required' },
+        { error: 'L\'email est requis' },
         { status: 400 }
       )
     }
@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     if (!emailRegex.test(email)) {
       return NextResponse.json(
-        { error: 'Invalid email format' },
+        { error: 'Format d\'email invalide' },
         { status: 400 }
       )
     }
@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
       // Return success to prevent email enumeration
       return NextResponse.json({
         success: true,
-        message: 'If an account with that email exists, we\'ve sent you a password reset link.',
+        message: 'Si un compte avec cet email existe, nous vous avons envoyé un lien de réinitialisation de mot de passe.',
       })
     }
 
@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
       // Still return success to prevent account enumeration
       return NextResponse.json({
         success: true,
-        message: 'If an account with that email exists, we\'ve sent you a password reset link.',
+        message: 'Si un compte avec cet email existe, nous vous avons envoyé un lien de réinitialisation de mot de passe.',
       })
     }
 
@@ -92,7 +92,7 @@ export async function POST(request: NextRequest) {
       
       console.error('Failed to send password reset email:', emailError)
       return NextResponse.json(
-        { error: 'Failed to send password reset email. Please try again later.' },
+        { error: 'Échec de l\'envoi de l\'email de réinitialisation de mot de passe. Veuillez réessayer plus tard.' },
         { status: 500 }
       )
     }
@@ -105,7 +105,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Error in forgot-password:', error)
     return NextResponse.json(
-      { error: 'An error occurred. Please try again later.' },
+      { error: 'Une erreur s\'est produite. Veuillez réessayer plus tard.' },
       { status: 500 }
     )
   }

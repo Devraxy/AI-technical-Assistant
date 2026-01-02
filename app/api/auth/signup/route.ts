@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
     // Validate input
     if (!email || !password) {
       return NextResponse.json(
-        { error: 'Email and password are required' },
+        { error: 'L\'email et le mot de passe sont requis' },
         { status: 400 }
       )
     }
@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     if (!emailRegex.test(email)) {
       return NextResponse.json(
-        { error: 'Invalid email format' },
+        { error: 'Format d\'email invalide' },
         { status: 400 }
       )
     }
@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
     // Validate password strength (minimum 6 characters)
     if (password.length < 6) {
       return NextResponse.json(
-        { error: 'Password must be at least 6 characters long' },
+        { error: 'Le mot de passe doit contenir au moins 6 caractères' },
         { status: 400 }
       )
     }
@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
 
     if (existingUser) {
       return NextResponse.json(
-        { error: 'An account with this email already exists' },
+        { error: 'Un compte avec cet email existe déjà' },
         { status: 409 }
       )
     }
@@ -96,13 +96,13 @@ export async function POST(request: NextRequest) {
     // Return success - user needs to verify email before logging in
     return NextResponse.json({
       success: true,
-      message: 'Account created successfully. Please check your email to verify your account.',
+      message: 'Compte créé avec succès. Veuillez vérifier votre email pour vérifier votre compte.',
       requiresVerification: true,
     })
   } catch (error) {
     console.error('Signup error:', error)
     return NextResponse.json(
-      { error: 'An error occurred during signup' },
+      { error: 'Une erreur s\'est produite lors de l\'inscription' },
       { status: 500 }
     )
   }
