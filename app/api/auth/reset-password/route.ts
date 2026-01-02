@@ -12,7 +12,7 @@ export async function POST(request: NextRequest) {
     // Validate input
     if (!token || !password) {
       return NextResponse.json(
-        { error: 'Token and password are required' },
+        { error: 'Le jeton et le mot de passe sont requis' },
         { status: 400 }
       )
     }
@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
     // Validate password strength (minimum 6 characters)
     if (password.length < 6) {
       return NextResponse.json(
-        { error: 'Password must be at least 6 characters long' },
+        { error: 'Le mot de passe doit contenir au moins 6 caractères' },
         { status: 400 }
       )
     }
@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
     // Check if token exists
     if (!resetToken) {
       return NextResponse.json(
-        { error: 'Invalid or expired reset token' },
+        { error: 'Jeton de réinitialisation invalide ou expiré' },
         { status: 400 }
       )
     }
@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
     // Check if token has been used
     if (resetToken.used) {
       return NextResponse.json(
-        { error: 'This reset token has already been used' },
+        { error: 'Ce jeton de réinitialisation a déjà été utilisé' },
         { status: 400 }
       )
     }
@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
         where: { id: resetToken.id },
       })
       return NextResponse.json(
-        { error: 'Reset token has expired. Please request a new one.' },
+        { error: 'Le jeton de réinitialisation a expiré. Veuillez en demander un nouveau.' },
         { status: 400 }
       )
     }
@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
     // Check if user is active
     if (resetToken.user.status !== 'active') {
       return NextResponse.json(
-        { error: 'Account is not active' },
+        { error: 'Le compte n\'est pas actif' },
         { status: 403 }
       )
     }
@@ -105,12 +105,12 @@ export async function POST(request: NextRequest) {
     // Return success
     return NextResponse.json({
       success: true,
-      message: 'Password has been reset successfully.',
+      message: 'Le mot de passe a été réinitialisé avec succès.',
     })
   } catch (error) {
     console.error('Error in reset-password:', error)
     return NextResponse.json(
-      { error: 'An error occurred. Please try again later.' },
+      { error: 'Une erreur s\'est produite. Veuillez réessayer plus tard.' },
       { status: 500 }
     )
   }

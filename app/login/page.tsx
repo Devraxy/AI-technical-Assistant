@@ -30,14 +30,14 @@ export default function LoginPage() {
       const data = await response.json()
 
       if (!response.ok) {
-        setError(data.error || 'An error occurred')
+        setError(data.error || 'Une erreur s\'est produite')
       } else {
         // Login successful - redirect to home
         router.push('/')
         router.refresh()
       }
     } catch (error) {
-      setError('An error occurred during login')
+      setError('Une erreur s\'est produite lors de la connexion')
     } finally {
       setLoading(false)
     }
@@ -48,10 +48,10 @@ export default function LoginPage() {
       <div className="w-full max-w-md space-y-8 rounded-lg bg-white p-8 shadow-lg dark:bg-gray-900">
         <div className="text-center">
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-            Welcome Back
+            Bon retour
           </h1>
           <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-            Sign in to your account
+            Connectez-vous à votre compte
           </p>
         </div>
 
@@ -82,7 +82,7 @@ export default function LoginPage() {
                 htmlFor="password"
                 className="block text-sm font-medium text-gray-700 dark:text-gray-300"
               >
-                Password
+                Mot de passe
               </label>
               <Input
                 id="password"
@@ -109,7 +109,7 @@ export default function LoginPage() {
               href="/forgot-password"
               className="text-sm font-medium text-blue-600 hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300"
             >
-              Forgot your password?
+              Mot de passe oublié ?
             </Link>
           </div>
 
@@ -118,18 +118,18 @@ export default function LoginPage() {
             disabled={loading}
             className="w-full"
           >
-            {loading ? 'Signing in...' : 'Sign in'}
+            {loading ? 'Connexion...' : 'Se connecter'}
           </Button>
         </form>
 
         <div className="mt-4 text-center text-sm text-gray-600 dark:text-gray-400">
           <p>
-            Don't have an account?{' '}
+            Vous n'avez pas de compte ?{' '}
             <Link
               href="/signup"
               className="font-medium text-blue-600 hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300"
             >
-              Sign up
+              S'inscrire
             </Link>
           </p>
         </div>

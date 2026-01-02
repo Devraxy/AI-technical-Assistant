@@ -30,7 +30,7 @@ export async function middleware(request: NextRequest) {
   // No session cookie - redirect to login
   if (!sessionId) {
     if (pathname.startsWith('/api/')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
     }
     return NextResponse.redirect(new URL('/login', request.url))
   }

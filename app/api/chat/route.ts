@@ -17,7 +17,7 @@ export async function POST(req: Request) {
     // Validate messages
     if (!messages || !Array.isArray(messages)) {
       return new Response(
-        JSON.stringify({ error: 'Messages must be an array' }),
+        JSON.stringify({ error: 'Les messages doivent être un tableau' }),
         { status: 400, headers: { 'Content-Type': 'application/json' } }
       )
     }
@@ -547,7 +547,7 @@ export async function POST(req: Request) {
   } catch (error: any) {
     if (error.message === 'Unauthorized') {
       return new Response(
-        JSON.stringify({ error: 'Unauthorized' }),
+        JSON.stringify({ error: 'Non autorisé' }),
         { status: 401, headers: { 'Content-Type': 'application/json' } }
       )
     }

@@ -30,13 +30,13 @@ export async function GET() {
     return NextResponse.json({ users })
   } catch (error: any) {
     if (error.message === 'Unauthorized') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
     }
     if (error.message?.includes('Forbidden')) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+      return NextResponse.json({ error: 'Interdit' }, { status: 403 })
     }
     return NextResponse.json(
-      { error: 'An error occurred' },
+      { error: 'Une erreur s\'est produite' },
       { status: 500 }
     )
   }

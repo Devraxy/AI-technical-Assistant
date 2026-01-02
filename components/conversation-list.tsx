@@ -99,7 +99,7 @@ function ConversationListComponent({
         alert('Échec de la suppression de la conversation')
       }
     } catch (error) {
-      alert('Failed to delete conversation')
+      alert('Échec de la suppression de la conversation')
     }
   }
 
@@ -147,7 +147,7 @@ function ConversationListComponent({
         onClick={onNewChat}
       >
         <PlusIcon className="h-4 w-4" />
-        New Chat
+        Nouvelle conversation
       </Button>
 
       <div className="flex flex-col gap-1 mt-2">

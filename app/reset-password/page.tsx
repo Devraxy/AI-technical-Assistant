@@ -19,7 +19,7 @@ function ResetPasswordForm() {
 
   useEffect(() => {
     if (!token) {
-      setError('Invalid or missing reset token')
+      setError('Jeton de réinitialisation invalide ou manquant')
     }
   }, [token])
 
@@ -29,17 +29,17 @@ function ResetPasswordForm() {
 
     // Client-side validation
     if (password !== confirmPassword) {
-      setError('Passwords do not match')
+      setError('Les mots de passe ne correspondent pas')
       return
     }
 
     if (password.length < 6) {
-      setError('Password must be at least 6 characters long')
+      setError('Le mot de passe doit contenir au moins 6 caractères')
       return
     }
 
     if (!token) {
-      setError('Invalid reset token')
+      setError('Jeton de réinitialisation invalide')
       return
     }
 
@@ -57,7 +57,7 @@ function ResetPasswordForm() {
       const data = await response.json()
 
       if (!response.ok) {
-        setError(data.error || 'An error occurred')
+        setError(data.error || 'Une erreur s\'est produite')
       } else {
         setSuccess(true)
         // Redirect to login after 3 seconds
@@ -66,7 +66,7 @@ function ResetPasswordForm() {
         }, 3000)
       }
     } catch (error) {
-      setError('An error occurred. Please try again later.')
+      setError('Une erreur s\'est produite. Veuillez réessayer plus tard.')
     } finally {
       setLoading(false)
     }
@@ -78,17 +78,17 @@ function ResetPasswordForm() {
         <div className="w-full max-w-md space-y-8 rounded-lg bg-white p-8 shadow-lg dark:bg-gray-900">
           <div className="text-center">
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-              Invalid Reset Link
+              Lien de réinitialisation invalide
             </h1>
             <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-              This password reset link is invalid or has expired.
+              Ce lien de réinitialisation de mot de passe est invalide ou a expiré.
             </p>
             <div className="mt-6">
               <Link
                 href="/forgot-password"
                 className="text-sm font-medium text-blue-600 hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300"
               >
-                Request a new reset link
+                Demander un nouveau lien de réinitialisation
               </Link>
             </div>
             <div className="mt-4">
@@ -96,7 +96,7 @@ function ResetPasswordForm() {
                 href="/login"
                 className="text-sm font-medium text-blue-600 hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300"
               >
-                Back to login
+                Retour à la connexion
               </Link>
             </div>
           </div>
@@ -112,7 +112,7 @@ function ResetPasswordForm() {
           <div className="text-center">
             <div className="rounded-md bg-green-50 p-4 dark:bg-green-900/20">
               <p className="text-sm text-green-800 dark:text-green-200">
-                Your password has been successfully reset! Redirecting to login...
+                Votre mot de passe a été réinitialisé avec succès ! Redirection vers la connexion...
               </p>
             </div>
             <div className="mt-6">
@@ -120,7 +120,7 @@ function ResetPasswordForm() {
                 href="/login"
                 className="text-sm font-medium text-blue-600 hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300"
               >
-                Go to login
+                Aller à la connexion
               </Link>
             </div>
           </div>
@@ -134,10 +134,10 @@ function ResetPasswordForm() {
       <div className="w-full max-w-md space-y-8 rounded-lg bg-white p-8 shadow-lg dark:bg-gray-900">
         <div className="text-center">
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-            Reset Password
+            Réinitialiser le mot de passe
           </h1>
           <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-            Enter your new password below
+            Entrez votre nouveau mot de passe ci-dessous
           </p>
         </div>
 
@@ -148,7 +148,7 @@ function ResetPasswordForm() {
                 htmlFor="password"
                 className="block text-sm font-medium text-gray-700 dark:text-gray-300"
               >
-                New Password
+                Nouveau mot de passe
               </label>
               <Input
                 id="password"
@@ -163,7 +163,7 @@ function ResetPasswordForm() {
                 minLength={6}
               />
               <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                Password must be at least 6 characters long
+                Le mot de passe doit contenir au moins 6 caractères
               </p>
             </div>
 
@@ -172,7 +172,7 @@ function ResetPasswordForm() {
                 htmlFor="confirmPassword"
                 className="block text-sm font-medium text-gray-700 dark:text-gray-300"
               >
-                Confirm Password
+                Confirmer le mot de passe
               </label>
               <Input
                 id="confirmPassword"
@@ -200,7 +200,7 @@ function ResetPasswordForm() {
             disabled={loading}
             className="w-full"
           >
-            {loading ? 'Resetting...' : 'Reset Password'}
+            {loading ? 'Réinitialisation...' : 'Réinitialiser le mot de passe'}
           </Button>
 
           <div className="text-center">
@@ -225,7 +225,7 @@ export default function ResetPasswordPage() {
           <div className="w-full max-w-md space-y-8 rounded-lg bg-white p-8 shadow-lg dark:bg-gray-900">
             <div className="text-center">
               <div className="h-8 w-8 animate-spin rounded-full border-4 border-gray-300 border-t-blue-600 mx-auto"></div>
-              <p className="mt-4 text-gray-600">Loading...</p>
+              <p className="mt-4 text-gray-600">Chargement...</p>
             </div>
           </div>
         </div>

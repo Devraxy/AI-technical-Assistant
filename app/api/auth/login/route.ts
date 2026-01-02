@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
     // Validate input
     if (!email || !password) {
       return NextResponse.json(
-        { error: 'Email and password are required' },
+        { error: 'L\'email et le mot de passe sont requis' },
         { status: 400 }
       )
     }
@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
     // Check if user exists
     if (!user) {
       return NextResponse.json(
-        { error: 'Invalid email or password' },
+        { error: 'Email ou mot de passe invalide' },
         { status: 401 }
       )
     }
@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
     if (!user.emailVerified) {
       return NextResponse.json(
         { 
-          error: 'Please verify your email address before logging in. Check your email for the verification link.',
+          error: 'Veuillez vérifier votre adresse email avant de vous connecter. Vérifiez votre email pour le lien de vérification.',
           requiresVerification: true 
         },
         { status: 403 }
@@ -45,14 +45,14 @@ export async function POST(request: NextRequest) {
     // Check user status - only active users can log in
     if (user.status === 'disabled') {
       return NextResponse.json(
-        { error: 'Account has been disabled' },
+        { error: 'Le compte a été désactivé' },
         { status: 403 }
       )
     }
 
     if (user.status === 'suspended') {
       return NextResponse.json(
-        { error: 'Account has been suspended' },
+        { error: 'Le compte a été suspendu' },
         { status: 403 }
       )
     }
@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
 
     if (!isPasswordValid) {
       return NextResponse.json(
-        { error: 'Invalid email or password' },
+        { error: 'Email ou mot de passe invalide' },
         { status: 401 }
       )
     }
@@ -85,7 +85,7 @@ export async function POST(request: NextRequest) {
     })
   } catch (error) {
     return NextResponse.json(
-      { error: 'An error occurred during login' },
+      { error: 'Une erreur s\'est produite lors de la connexion' },
       { status: 500 }
     )
   }
