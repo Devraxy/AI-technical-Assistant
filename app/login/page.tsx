@@ -12,10 +12,15 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [requiresVerification, setRequiresVerification] = useState(false)
+  const [resendLoading, setResendLoading] = useState(false)
+  const [resendSuccess, setResendSuccess] = useState(false)
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
     setError('')
+    setRequiresVerification(false)
+    setResendSuccess(false)
     setLoading(true)
 
     try {
@@ -31,6 +36,9 @@ export default function LoginPage() {
 
       if (!response.ok) {
         setError(data.error || 'An error occurred')
+        if (data.requiresVerification) {
+          setRequiresVerification(true)
+        }
       } else {
         // Login successful - redirect to home
         router.push('/')
@@ -40,6 +48,40 @@ export default function LoginPage() {
       setError('An error occurred during login')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleResendVerification = async () => {
+    if (!email) {
+      setError('Please enter your email address first')
+      return
+    }
+
+    setResendLoading(true)
+    setError('')
+    setResendSuccess(false)
+
+    try {
+      const response = await fetch('/api/auth/resend-verification', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        setError(data.error || 'Failed to send verification email')
+      } else {
+        setResendSuccess(true)
+        setError('')
+      }
+    } catch (error) {
+      setError('An error occurred. Please try again later.')
+    } finally {
+      setResendLoading(false)
     }
   }
 
@@ -101,6 +143,31 @@ export default function LoginPage() {
           {error && (
             <div className="rounded-md bg-red-50 p-4 dark:bg-red-900/20">
               <p className="text-sm text-red-800 dark:text-red-200">{error}</p>
+            </div>
+          )}
+
+          {resendSuccess && (
+            <div className="rounded-md bg-green-50 p-4 dark:bg-green-900/20">
+              <p className="text-sm text-green-800 dark:text-green-200">
+                Verification email sent! Please check your inbox.
+              </p>
+            </div>
+          )}
+
+          {requiresVerification && (
+            <div className="rounded-md bg-yellow-50 p-4 dark:bg-yellow-900/20">
+              <p className="text-sm text-yellow-800 dark:text-yellow-200 mb-3">
+                Your email address needs to be verified before you can log in.
+              </p>
+              <Button
+                type="button"
+                onClick={handleResendVerification}
+                disabled={resendLoading || !email}
+                variant="outline"
+                className="w-full"
+              >
+                {resendLoading ? 'Sending...' : 'Resend Verification Email'}
+              </Button>
             </div>
           )}
 

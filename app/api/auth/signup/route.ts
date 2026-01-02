@@ -81,23 +81,29 @@ export async function POST(request: NextRequest) {
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
     const verificationUrl = `${baseUrl}/verify-email?token=${verificationToken}&code=${verificationCode}`
 
+    let emailSent = false
     try {
       await sendEmailVerification(
         user.email,
         verificationUrl,
         verificationCode
       )
+      emailSent = true
     } catch (emailError) {
-      // If email sending fails, we should still return success but log the error
-      console.error('Failed to send verification email:', emailError)
-      // Don't fail the signup - user can request a new verification email later
+      // If email sending fails, log the error but don't fail the signup
+      // User can request a new verification email later
+      console.error('Failed to send verification email during signup:', emailError)
+      emailSent = false
     }
 
     // Return success - user needs to verify email before logging in
     return NextResponse.json({
       success: true,
-      message: 'Account created successfully. Please check your email to verify your account.',
+      message: emailSent 
+        ? 'Account created successfully. Please check your email to verify your account.'
+        : 'Account created successfully. However, we couldn\'t send the verification email. Please use the resend button to receive your verification link.',
       requiresVerification: true,
+      emailSent,
     })
   } catch (error) {
     console.error('Signup error:', error)

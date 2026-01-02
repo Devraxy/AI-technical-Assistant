@@ -16,6 +16,7 @@ export async function middleware(request: NextRequest) {
     '/api/auth/forgot-password',
     '/api/auth/reset-password',
     '/api/auth/verify-email',
+    '/api/auth/resend-verification',
   ]
   const isPublicPath = publicPaths.some(path => pathname.startsWith(path))
 
