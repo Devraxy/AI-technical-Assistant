@@ -37,7 +37,7 @@ export async function GET(
 
     if (!conversation) {
       return NextResponse.json(
-        { error: 'Conversation not found' },
+        { error: 'Conversation introuvable' },
         { status: 404 }
       )
     }
@@ -172,7 +172,7 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
     return NextResponse.json(
-      { error: 'Failed to fetch messages' },
+      { error: 'Échec de la récupération des messages' },
       { status: 500 }
     )
   }

@@ -60,7 +60,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   ) {
     return (
       <div className="flex min-h-screen items-center justify-center">
-        <LoadingSpinner size="lg" text="Loading..." variant="default" />
+        <LoadingSpinner size="lg" text="Chargement..." variant="default" />
       </div>
     )
   }

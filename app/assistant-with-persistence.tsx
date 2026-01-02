@@ -78,7 +78,7 @@ function AssistantContent() {
                 <SidebarMenuItem>
                   <SidebarMenuButton size="lg" asChild>
                     <Link href="/">
-                      <img src="/logo.svg" alt="AI Assistant" className="h-full w-full object-contain" />
+                      <img src="/logo.svg" alt="Assistant IA" className="h-full w-full object-contain" />
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -103,7 +103,7 @@ function AssistantContent() {
               <BreadcrumbList>
                 <BreadcrumbItem>
                   <BreadcrumbPage>
-                    {currentConversationId ? 'Conversation' : 'New Chat'}
+                    {currentConversationId ? 'Conversation' : 'Nouvelle conversation'}
                   </BreadcrumbPage>
                 </BreadcrumbItem>
               </BreadcrumbList>

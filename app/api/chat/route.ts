@@ -183,7 +183,7 @@ export async function POST(req: Request) {
       // Get the last user message for title generation
       const lastUserMessage = validMessages.filter(m => m.role === 'user').pop();
       
-      let title = 'New Conversation';
+      let title = 'Nouvelle conversation';
       if (lastUserMessage) {
         if (typeof lastUserMessage.content === 'string') {
           title = lastUserMessage.content.slice(0, 50);
@@ -517,8 +517,8 @@ export async function POST(req: Request) {
         // Return a user-friendly error response
         return new Response(
           JSON.stringify({ 
-            error: 'Invalid image data',
-            message: 'One or more images could not be processed. Please ensure images are in a supported format (JPEG, PNG, GIF, or WebP) and try again.',
+            error: 'Données d\'image invalides',
+            message: 'Une ou plusieurs images n\'ont pas pu être traitées. Veuillez vous assurer que les images sont dans un format pris en charge (JPEG, PNG, GIF ou WebP) et réessayez.',
             details: process.env.NODE_ENV === 'development' ? streamError.message : undefined,
           }),
           { status: 400, headers: { 'Content-Type': 'application/json' } }
@@ -554,7 +554,7 @@ export async function POST(req: Request) {
     
     return new Response(
       JSON.stringify({ 
-        error: 'An error occurred',
+        error: 'Une erreur s\'est produite',
         message: error.message,
         details: process.env.NODE_ENV === 'development' ? error.stack : undefined,
       }),
