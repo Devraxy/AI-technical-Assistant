@@ -53,7 +53,7 @@ export default function LoginPage() {
 
   const handleResendVerification = async () => {
     if (!email) {
-      setError('Please enter your email address first')
+      setError('Veuillez d\'abord entrer votre adresse email')
       return
     }
 
@@ -73,13 +73,13 @@ export default function LoginPage() {
       const data = await response.json()
 
       if (!response.ok) {
-        setError(data.error || 'Failed to send verification email')
+        setError(data.error || 'Échec de l\'envoi de l\'email de vérification')
       } else {
         setResendSuccess(true)
         setError('')
       }
     } catch (error) {
-      setError('An error occurred. Please try again later.')
+      setError('Une erreur s\'est produite. Veuillez réessayer plus tard.')
     } finally {
       setResendLoading(false)
     }
@@ -149,7 +149,7 @@ export default function LoginPage() {
           {resendSuccess && (
             <div className="rounded-md bg-green-50 p-4 dark:bg-green-900/20">
               <p className="text-sm text-green-800 dark:text-green-200">
-                Verification email sent! Please check your inbox.
+                Email de vérification envoyé ! Veuillez vérifier votre boîte de réception.
               </p>
             </div>
           )}
@@ -157,7 +157,7 @@ export default function LoginPage() {
           {requiresVerification && (
             <div className="rounded-md bg-yellow-50 p-4 dark:bg-yellow-900/20">
               <p className="text-sm text-yellow-800 dark:text-yellow-200 mb-3">
-                Your email address needs to be verified before you can log in.
+                Votre adresse email doit être vérifiée avant de pouvoir vous connecter.
               </p>
               <Button
                 type="button"
@@ -166,7 +166,7 @@ export default function LoginPage() {
                 variant="outline"
                 className="w-full"
               >
-                {resendLoading ? 'Sending...' : 'Resend Verification Email'}
+                {resendLoading ? 'Envoi...' : 'Renvoyer l\'email de vérification'}
               </Button>
             </div>
           )}
