@@ -66,7 +66,7 @@ class ErrorBoundary extends Component<
         <div className="flex h-full items-center justify-center">
           <div className="text-center">
             <p className="text-sm text-muted-foreground">
-              Something went wrong. Please refresh the page.
+              Une erreur s'est produite. Veuillez actualiser la page.
             </p>
           </div>
         </div>
@@ -578,7 +578,7 @@ function AssistantContent() {
                   <SidebarMenuItem>
                     <SidebarMenuButton size="lg" asChild>
                       <Link href="/">
-                        <img src="/logo.svg" alt="AI Assistant" className="h-full w-full object-contain" />
+                        <img src="/logo.svg" alt="Assistant IA" className="h-full w-full object-contain" />
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -603,7 +603,7 @@ function AssistantContent() {
                 <BreadcrumbList>
                   <BreadcrumbItem>
                     <BreadcrumbPage>
-                      {currentConversationId ? 'Conversation' : 'New Chat'}
+                      {currentConversationId ? 'Conversation' : 'Nouvelle conversation'}
                     </BreadcrumbPage>
                   </BreadcrumbItem>
                 </BreadcrumbList>
@@ -618,7 +618,7 @@ function AssistantContent() {
                 <div className="flex h-full items-center justify-center">
                   <LoadingSpinner 
                     size="lg" 
-                    text={isLoadingHistory ? 'Loading conversation...' : 'Preparing messages...'}
+                    text={isLoadingHistory ? 'Chargement de la conversation...' : 'Préparation des messages...'}
                     variant="default"
                   />
                 </div>

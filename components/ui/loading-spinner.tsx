@@ -108,7 +108,7 @@ export function LoadingSpinner({
 }
 
 // Full page loading component
-export function LoadingPage({ text = 'Loading...' }: { text?: string }) {
+export function LoadingPage({ text = 'Chargement...' }: { text?: string }) {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background">
       <div className="text-center space-y-4">

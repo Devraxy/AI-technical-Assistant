@@ -75,7 +75,7 @@ function ConversationListComponent({
   async function deleteConversation(conversationId: string, event: React.MouseEvent) {
     event.stopPropagation() // Prevent selecting the conversation
 
-    if (!confirm('Are you sure you want to delete this conversation?')) {
+    if (!confirm('Êtes-vous sûr de vouloir supprimer cette conversation ?')) {
       return
     }
 
@@ -96,7 +96,7 @@ function ConversationListComponent({
         // Refresh from server to ensure consistency (but don't show loading)
         fetchConversations()
       } else {
-        alert('Failed to delete conversation')
+        alert('Échec de la suppression de la conversation')
       }
     } catch (error) {
       alert('Failed to delete conversation')
@@ -111,7 +111,7 @@ function ConversationListComponent({
     if (diffInHours < 24) {
       return format(date, 'HH:mm')
     } else if (diffInHours < 48) {
-      return 'Yesterday'
+      return 'Hier'
     } else if (diffInHours < 168) { // 7 days
       return format(date, 'EEE') // Mon, Tue, etc.
     } else {
@@ -128,7 +128,7 @@ function ConversationListComponent({
           onClick={onNewChat}
         >
           <PlusIcon className="h-4 w-4" />
-          New Chat
+          Nouvelle conversation
         </Button>
         <div className="flex flex-col gap-2 mt-2">
           {Array.from({ length: 5 }, (_, i) => (
@@ -153,9 +153,9 @@ function ConversationListComponent({
       <div className="flex flex-col gap-1 mt-2">
         {conversations.length === 0 && (
           <div className="px-3 py-8 text-center text-sm text-muted-foreground">
-            No conversations yet.
+            Aucune conversation pour le moment.
             <br />
-            Start a new chat to begin.
+            Commencez une nouvelle conversation pour démarrer.
           </div>
         )}
 
@@ -172,7 +172,7 @@ function ConversationListComponent({
                 <div className="flex items-center gap-2 min-w-0 flex-1">
                   <MessageSquare className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
                   <span className="text-sm truncate font-medium">
-                    {conversation.title || 'New Conversation'}
+                    {conversation.title || 'Nouvelle conversation'}
                   </span>
                 </div>
                 <span className="text-xs text-muted-foreground flex-shrink-0">
@@ -180,13 +180,13 @@ function ConversationListComponent({
                 </span>
               </div>
               <div className="text-xs text-muted-foreground mt-0.5">
-                {conversation._count.messages} messages
+                {conversation._count.messages} message{conversation._count.messages > 1 ? 's' : ''}
               </div>
             </div>
             <button
               onClick={(e) => deleteConversation(conversation.id, e)}
               className="mr-2 p-1.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
-              aria-label="Delete conversation"
+              aria-label="Supprimer la conversation"
             >
               <Trash2 className="h-3.5 w-3.5" />
             </button>
