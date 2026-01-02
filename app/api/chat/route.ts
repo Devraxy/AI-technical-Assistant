@@ -2,35 +2,7 @@ import { openai } from "@ai-sdk/openai";
 import { streamText, convertToModelMessages } from "ai";
 import { requireAuth } from '@/lib/session'
 import { prisma } from '@/lib/prisma'
-
-// Strict response format system prompt
-const SYSTEM_PROMPT = `Tu es un assistant technique spécialisé. Tu dois TOUJOURS répondre en suivant cette structure exacte :
-
-**1. Résumé (2 lignes maximum)**
-Une synthèse claire et concise de la réponse.
-
-**2. Analyse technique**
-Détails techniques pertinents, concepts clés, et contexte nécessaire.
-
-**3. Références normatives**
-Standards, normes, bonnes pratiques, ou documentation officielle applicables.
-
-**4. Logique / Schéma (texte)**
-Explication de la logique, du flux de travail, ou de l'architecture (en format texte/pseudo-code).
-
-**5. Solutions / Recommandations**
-Solutions concrètes, étapes à suivre, ou recommandations actionnables.
-
-**6. Points de vigilance**
-Risques, limitations, pièges à éviter, ou considérations importantes.
-
-**7. Version courte** (si pertinent)
-Résumé ultra-concis pour référence rapide (optionnel selon le contexte).
-
-IMPORTANT: 
-- Tu dois respecter cette structure pour TOUTES les réponses, sans exception. Ne fournis jamais de réponses non structurées.
-- Tu PEUX et DOIS analyser des images. Quand un utilisateur envoie une image, tu DOIS l'analyser en détail et fournir une réponse structurée selon le format ci-dessus.
-- Si un message contient une image, analyse-la complètement et décris ce que tu vois dans ta réponse.`;
+import { SYSTEM_PROMPT } from '@/lib/joy-stream'
 
 export async function POST(req: Request) {
   try {
@@ -45,7 +17,7 @@ export async function POST(req: Request) {
     // Validate messages
     if (!messages || !Array.isArray(messages)) {
       return new Response(
-        JSON.stringify({ error: 'Messages must be an array' }),
+        JSON.stringify({ error: 'Les messages doivent être un tableau' }),
         { status: 400, headers: { 'Content-Type': 'application/json' } }
       )
     }
@@ -65,22 +37,64 @@ export async function POST(req: Request) {
       convertedMessages = messages;
     }
 
-    // Helper function to convert image to base64 format expected by OpenAI
+    // Helper function to validate and convert image to base64 format expected by OpenAI
     const convertImageToBase64 = async (imageInput: any): Promise<string | null> => {
       try {
-        // If it's already a base64 string with data URL prefix, return as-is
+        // If it's already a base64 string with data URL prefix, validate and return
         if (typeof imageInput === 'string') {
           // Check for data URL format (data:image/...;base64,...)
           if (imageInput.startsWith('data:image/')) {
-            return imageInput;
+            // Validate the data URL format
+            const dataUrlMatch = imageInput.match(/^data:image\/([a-zA-Z0-9]+);base64,(.+)$/);
+            if (dataUrlMatch) {
+              const mimeType = dataUrlMatch[1];
+              const base64Data = dataUrlMatch[2];
+              
+              // Validate MIME type is supported by OpenAI
+              const supportedTypes = ['jpeg', 'jpg', 'png', 'gif', 'webp'];
+              if (!supportedTypes.includes(mimeType.toLowerCase())) {
+                if (process.env.NODE_ENV === 'development') {
+                  console.warn(`Unsupported image MIME type: ${mimeType}`);
+                }
+                return null;
+              }
+              
+              // Validate base64 data is not empty and is valid
+              if (!base64Data || base64Data.trim().length === 0) {
+                if (process.env.NODE_ENV === 'development') {
+                  console.warn('Empty base64 image data');
+                }
+                return null;
+              }
+              
+              // Validate base64 format (alphanumeric + / + =)
+              const cleanBase64 = base64Data.replace(/\s/g, '');
+              if (!/^[A-Za-z0-9+/=]+$/.test(cleanBase64)) {
+                if (process.env.NODE_ENV === 'development') {
+                  console.warn('Invalid base64 characters in image data');
+                }
+                return null;
+              }
+              
+              // Return validated data URL
+              return `data:image/${mimeType};base64,${cleanBase64}`;
+            } else {
+              // Malformed data URL
+              if (process.env.NODE_ENV === 'development') {
+                console.warn('Malformed data URL format');
+              }
+              return null;
+            }
           }
           // If it's an external URL, OpenAI can handle it directly
           if (imageInput.startsWith('http://') || imageInput.startsWith('https://')) {
             return imageInput;
           }
           // If it's a blob URL (blob:http://...), we can't process it server-side
-          // This shouldn't happen if assistant-ui is working correctly
           if (imageInput.startsWith('blob:')) {
+            if (process.env.NODE_ENV === 'development') {
+              console.warn('Blob URL cannot be processed server-side');
+            }
             return null;
           }
           // If it's a long string, likely base64 without prefix
@@ -88,10 +102,15 @@ export async function POST(req: Request) {
           if (imageInput.length > 100 && /^[A-Za-z0-9+/=\s]+$/.test(imageInput.replace(/\s/g, ''))) {
             // Remove any whitespace
             const cleanBase64 = imageInput.replace(/\s/g, '');
-            // Try to detect MIME type from common patterns or default to jpeg
-            let mimeType = 'image/jpeg';
-            // Could add more sophisticated detection here if needed
-            return `data:${mimeType};base64,${cleanBase64}`;
+            // Default to jpeg if we can't detect type
+            // Note: This is less reliable, prefer data URLs with proper MIME types
+            if (process.env.NODE_ENV === 'development') {
+              console.warn('Base64 without MIME type, defaulting to jpeg');
+            }
+            return `data:image/jpeg;base64,${cleanBase64}`;
+          }
+          if (process.env.NODE_ENV === 'development') {
+            console.warn('Invalid image input format:', typeof imageInput, imageInput.substring(0, 50));
           }
           return null;
         }
@@ -100,9 +119,25 @@ export async function POST(req: Request) {
           // Check if it has arrayBuffer method (File-like object)
           if ('arrayBuffer' in imageInput && typeof imageInput.arrayBuffer === 'function') {
             const arrayBuffer = await imageInput.arrayBuffer();
+            if (!arrayBuffer || arrayBuffer.byteLength === 0) {
+              if (process.env.NODE_ENV === 'development') {
+                console.warn('Empty image arrayBuffer');
+              }
+              return null;
+            }
             const buffer = Buffer.from(arrayBuffer);
             const base64 = buffer.toString('base64');
             const mimeType = imageInput.type || 'image/jpeg';
+            
+            // Validate MIME type
+            const supportedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+            if (!supportedTypes.includes(mimeType.toLowerCase())) {
+              if (process.env.NODE_ENV === 'development') {
+                console.warn(`Unsupported image MIME type: ${mimeType}`);
+              }
+              return null;
+            }
+            
             return `data:${mimeType};base64,${base64}`;
           }
           // Check if it has a data property
@@ -112,6 +147,9 @@ export async function POST(req: Request) {
         }
         return null;
       } catch (error) {
+        if (process.env.NODE_ENV === 'development') {
+          console.error('Error converting image to base64:', error);
+        }
         return null;
       }
     };
@@ -145,7 +183,7 @@ export async function POST(req: Request) {
       // Get the last user message for title generation
       const lastUserMessage = validMessages.filter(m => m.role === 'user').pop();
       
-      let title = 'New Conversation';
+      let title = 'Nouvelle conversation';
       if (lastUserMessage) {
         if (typeof lastUserMessage.content === 'string') {
           title = lastUserMessage.content.slice(0, 50);
@@ -202,12 +240,17 @@ export async function POST(req: Request) {
                     // Ensure it's in base64 format (should already be from frontend)
                     const base64Image = await convertImageToBase64(imageData);
                     if (base64Image) {
-                return {
-                  type: 'image_url',
-                  image_url: {
+                      return {
+                        type: 'image_url',
+                        image_url: {
                           url: base64Image,
-                  },
-                };
+                        },
+                      };
+                    } else {
+                      // Skip invalid images instead of failing
+                      if (process.env.NODE_ENV === 'development') {
+                        console.warn('Skipping invalid image data');
+                      }
                     }
                   }
               }
@@ -252,9 +295,42 @@ export async function POST(req: Request) {
     // After convertToModelMessages, the messages are already in correct ModelMessage format
     // Filter out system messages from user input (we'll add our own system message)
     // Filter out any null/undefined messages
+    // Also validate and clean image data in messages
     const modelMessages = validMessages.filter((msg: any) => {
       if (!msg || !msg.role) return false;
       if (msg.role === 'system') return false; // Don't include system messages from user input
+      
+      // Validate image content if present
+      if (Array.isArray(msg.content)) {
+        msg.content = msg.content.filter((c: any) => {
+          if (c.type === 'image_url' && c.image_url?.url) {
+            const url = c.image_url.url;
+            // Validate it's a proper data URL or HTTP(S) URL
+            if (url.startsWith('data:image/')) {
+              // Validate data URL format
+              const isValid = /^data:image\/(jpeg|jpg|png|gif|webp);base64,[A-Za-z0-9+/=]+$/.test(url);
+              if (!isValid) {
+                if (process.env.NODE_ENV === 'development') {
+                  console.warn('Filtering out invalid image data URL');
+                }
+                return false;
+              }
+            } else if (!url.startsWith('http://') && !url.startsWith('https://')) {
+              if (process.env.NODE_ENV === 'development') {
+                console.warn('Filtering out invalid image URL format');
+              }
+              return false;
+            }
+          }
+          return true;
+        });
+        
+        // Remove message if it has no valid content after filtering
+        if (msg.content.length === 0) {
+          return false;
+        }
+      }
+      
       return true;
     });
 
@@ -265,8 +341,108 @@ export async function POST(req: Request) {
       ...modelMessages,
     ];
 
+    // Final validation and cleanup of messages before sending to OpenAI
+    // This is critical to prevent invalid image data from reaching the API
+    const validatedMessages = allMessages.map((msg: any) => {
+      if (!msg || !msg.content) return msg;
+      
+      // If content is an array (multimodal), validate and filter images
+      if (Array.isArray(msg.content)) {
+        const validatedContent = msg.content.map((c: any) => {
+          // Validate image_url content
+          if (c.type === 'image_url' && c.image_url?.url) {
+            const url = c.image_url.url;
+            
+            // Validate data URL format
+            if (url.startsWith('data:image/')) {
+              const dataUrlMatch = url.match(/^data:image\/([a-zA-Z0-9]+);base64,(.+)$/);
+              if (!dataUrlMatch) {
+                if (process.env.NODE_ENV === 'development') {
+                  console.warn('Invalid data URL format, removing image:', url.substring(0, 100));
+                }
+                return null; // Remove invalid image
+              }
+              
+              const mimeType = dataUrlMatch[1].toLowerCase();
+              const base64Data = dataUrlMatch[2];
+              
+              // Check MIME type is supported
+              const supportedTypes = ['jpeg', 'jpg', 'png', 'gif', 'webp'];
+              if (!supportedTypes.includes(mimeType)) {
+                if (process.env.NODE_ENV === 'development') {
+                  console.warn(`Unsupported MIME type: ${mimeType}, removing image`);
+                }
+                return null; // Remove unsupported image
+              }
+              
+              // Validate base64 data is not empty and is valid
+              if (!base64Data || base64Data.trim().length === 0) {
+                if (process.env.NODE_ENV === 'development') {
+                  console.warn('Empty base64 data, removing image');
+                }
+                return null; // Remove empty image
+              }
+              
+              // Validate base64 format
+              const cleanBase64 = base64Data.replace(/\s/g, '');
+              if (!/^[A-Za-z0-9+/=]+$/.test(cleanBase64)) {
+                if (process.env.NODE_ENV === 'development') {
+                  console.warn('Invalid base64 characters, removing image');
+                }
+                return null; // Remove invalid base64
+              }
+              
+              // Validate base64 length (should be reasonable for an image)
+              if (cleanBase64.length < 100) {
+                if (process.env.NODE_ENV === 'development') {
+                  console.warn('Base64 data too short, likely invalid, removing image');
+                }
+                return null; // Remove suspiciously short image
+              }
+              
+              // Return validated image
+              return c;
+            } 
+            // Validate HTTP(S) URL
+            else if (url.startsWith('http://') || url.startsWith('https://')) {
+              return c; // HTTP URLs are valid
+            } 
+            // Invalid URL format
+            else {
+              if (process.env.NODE_ENV === 'development') {
+                console.warn('Invalid image URL format, removing:', url.substring(0, 100));
+              }
+              return null; // Remove invalid URL
+            }
+          }
+          
+          // Keep non-image content as-is
+          return c;
+        }).filter((c: any) => c !== null); // Remove null entries
+        
+        // If all content was removed, keep at least the text or return null
+        if (validatedContent.length === 0) {
+          // Try to find text content
+          const textContent = msg.content.find((c: any) => c.type === 'text');
+          if (textContent) {
+            return { ...msg, content: [textContent] };
+          }
+          // If no text content, this message is invalid
+          if (process.env.NODE_ENV === 'development') {
+            console.warn('Message has no valid content after image validation, removing message');
+          }
+          return null;
+        }
+        
+        return { ...msg, content: validatedContent };
+      }
+      
+      // Non-array content (string) is fine
+      return msg;
+    }).filter((msg: any) => msg !== null); // Remove null messages
+    
     // Check if any message has images to determine which model to use
-    const hasImagesInAnyMessage = allMessages.some((msg: any) => 
+    const hasImagesInAnyMessage = validatedMessages.some((msg: any) => 
       Array.isArray(msg.content) && 
       msg.content.some((c: any) => c.type === 'image_url' && c.image_url?.url)
     );
@@ -274,35 +450,81 @@ export async function POST(req: Request) {
     // Use gpt-4o for vision support, gpt-4o-mini for text-only (cost optimization)
     const modelName = hasImagesInAnyMessage ? "gpt-4o" : "gpt-4o-mini";
     
+    // Log in development to help debug
+    if (process.env.NODE_ENV === 'development' && hasImagesInAnyMessage) {
+      const imageCount = validatedMessages.reduce((count, msg) => {
+        if (Array.isArray(msg.content)) {
+          return count + msg.content.filter((c: any) => c.type === 'image_url').length;
+        }
+        return count;
+      }, 0);
+      console.log(`Sending ${imageCount} validated image(s) to ${modelName}`);
+    }
+    
     let result;
     try {
       result = streamText({
         model: openai(modelName),
-        messages: allMessages,
-      onFinish: async ({ text }) => {
-        // Only save assistant response if we have a conversation
-        if (conversation) {
-          try {
-            await Promise.all([
-              prisma.message.create({
-                data: {
-                  conversationId: conversation.id,
-                  role: 'assistant',
-                  content: text,
-                },
-              }),
-              prisma.conversation.update({
-                where: { id: conversation.id },
-                data: { updatedAt: new Date() },
-              }),
-            ]);
-          } catch (error) {
-            // Silently handle save errors
+        messages: validatedMessages,
+        onFinish: async ({ text }) => {
+          // Only save assistant response if we have a conversation
+          if (conversation) {
+            try {
+              await Promise.all([
+                prisma.message.create({
+                  data: {
+                    conversationId: conversation.id,
+                    role: 'assistant',
+                    content: text,
+                  },
+                }),
+                prisma.conversation.update({
+                  where: { id: conversation.id },
+                  data: { updatedAt: new Date() },
+                }),
+              ]);
+            } catch (error) {
+              // Silently handle save errors
+            }
           }
-        }
-      },
-    });
+        },
+      });
     } catch (streamError: any) {
+      // Check if it's an image validation error from OpenAI
+      if (streamError.message && streamError.message.includes('image data') && streamError.message.includes('valid image')) {
+        // Log detailed error information in development
+        if (process.env.NODE_ENV === 'development') {
+          console.error('Image validation error from OpenAI:');
+          console.error('Error message:', streamError.message);
+          console.error('Messages with images:', JSON.stringify(
+            validatedMessages.filter((msg: any) => 
+              Array.isArray(msg.content) && 
+              msg.content.some((c: any) => c.type === 'image_url')
+            ).map((msg: any) => ({
+              role: msg.role,
+              imageCount: Array.isArray(msg.content) ? 
+                msg.content.filter((c: any) => c.type === 'image_url').length : 0,
+              imageUrls: Array.isArray(msg.content) ? 
+                msg.content.filter((c: any) => c.type === 'image_url').map((c: any) => 
+                  c.image_url?.url?.substring(0, 100) || 'no url'
+                ) : []
+            })),
+            null,
+            2
+          ));
+        }
+        
+        // Return a user-friendly error response
+        return new Response(
+          JSON.stringify({ 
+            error: 'Données d\'image invalides',
+            message: 'Une ou plusieurs images n\'ont pas pu être traitées. Veuillez vous assurer que les images sont dans un format pris en charge (JPEG, PNG, GIF ou WebP) et réessayez.',
+            details: process.env.NODE_ENV === 'development' ? streamError.message : undefined,
+          }),
+          { status: 400, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
+      // Re-throw other errors
       throw streamError;
     }
 
@@ -325,14 +547,14 @@ export async function POST(req: Request) {
   } catch (error: any) {
     if (error.message === 'Unauthorized') {
       return new Response(
-        JSON.stringify({ error: 'Unauthorized' }),
+        JSON.stringify({ error: 'Non autorisé' }),
         { status: 401, headers: { 'Content-Type': 'application/json' } }
       )
     }
     
     return new Response(
       JSON.stringify({ 
-        error: 'An error occurred',
+        error: 'Une erreur s\'est produite',
         message: error.message,
         details: process.env.NODE_ENV === 'development' ? error.stack : undefined,
       }),

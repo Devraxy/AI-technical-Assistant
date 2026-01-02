@@ -9,7 +9,7 @@ export async function GET() {
 
     if (!user) {
       return NextResponse.json(
-        { error: 'Not authenticated' },
+        { error: 'Non authentifié' },
         { status: 401 }
       )
     }
@@ -17,7 +17,7 @@ export async function GET() {
     return NextResponse.json({ user })
   } catch (error) {
     return NextResponse.json(
-      { error: 'An error occurred' },
+      { error: 'Une erreur s\'est produite' },
       { status: 500 }
     )
   }

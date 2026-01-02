@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo, memo } from 'react'
 import { Button } from '@/components/ui/button'
 import { ArrowUpIcon, Loader2, Square, ImageIcon, X } from 'lucide-react'
+import { LoadingSpinner } from '@/components/ui/loading-spinner'
 import ReactMarkdown from 'react-markdown'
 
 interface Message {
@@ -28,6 +29,64 @@ export function ChatInterface({ conversationId, onConversationCreated }: ChatInt
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
+  // Optimized message transformation
+  const transformMessage = useCallback((msg: any) => {
+    let images: string[] = []
+    let textContent = ''
+    
+    if (Array.isArray(msg.content)) {
+      const imageParts = msg.content.filter((part: any) => 
+        (part.type === 'image_url' && part.image_url?.url) ||
+        (part.type === 'image' && (part.image || part.url))
+      )
+      images = imageParts.map((part: any) => 
+        part.image_url?.url || part.image || part.url
+      )
+      const textPart = msg.content.find((p: any) => p.type === 'text')
+      textContent = textPart?.text || ''
+    } else if (typeof msg.content === 'string') {
+      textContent = msg.content
+    }
+    
+    return {
+      ...msg,
+      content: textContent,
+      images: images.length > 0 ? images : undefined
+    }
+  }, [])
+
+  // Load conversation function - must be declared before useEffect that uses it
+  const loadConversation = useCallback(async (id: string) => {
+    setLoadingMessages(true)
+    try {
+      const response = await fetch(`/api/conversations/${id}/messages`)
+      if (response.ok) {
+        const data = await response.json()
+        // Transform messages using optimized function
+        const transformedMessages = (data.messages || []).map(transformMessage)
+        setMessages(transformedMessages)
+      } else if (response.status === 404) {
+        // Conversation not found - clear it and start fresh
+        setMessages([])
+        if (onConversationCreated) {
+          // This will trigger the parent to clear the conversationId
+          localStorage.removeItem('currentConversationId')
+          window.location.reload()
+        }
+      } else {
+        if (process.env.NODE_ENV === 'development') {
+          console.error('Failed to load conversation')
+        }
+      }
+    } catch (error) {
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Error loading conversation:', error)
+      }
+    } finally {
+      setLoadingMessages(false)
+    }
+  }, [transformMessage, onConversationCreated])
+
   // Load messages when conversation changes
   useEffect(() => {
     if (conversationId) {
@@ -35,7 +94,7 @@ export function ChatInterface({ conversationId, onConversationCreated }: ChatInt
     } else {
       setMessages([])
     }
-  }, [conversationId])
+  }, [conversationId, loadConversation])
 
   // Auto-scroll to bottom when messages change
   useEffect(() => {
@@ -59,7 +118,7 @@ export function ChatInterface({ conversationId, onConversationCreated }: ChatInt
 
     const imageFiles = Array.from(files).filter(file => file.type.startsWith('image/'))
     if (imageFiles.length === 0) {
-      alert('Please select image files only')
+      alert('Veuillez sélectionner uniquement des fichiers image')
       return
     }
 
@@ -68,7 +127,7 @@ export function ChatInterface({ conversationId, onConversationCreated }: ChatInt
       setSelectedImages(prev => [...prev, ...base64Images])
     } catch (error) {
       console.error('Error converting images:', error)
-      alert('Failed to process images')
+      alert('Échec du traitement des images')
     }
 
     // Reset input
@@ -80,64 +139,6 @@ export function ChatInterface({ conversationId, onConversationCreated }: ChatInt
   // Remove an image from selection
   function removeImage(index: number) {
     setSelectedImages(prev => prev.filter((_, i) => i !== index))
-  }
-
-  async function loadConversation(id: string) {
-    setLoadingMessages(true)
-    try {
-      const response = await fetch(`/api/conversations/${id}/messages`)
-      if (response.ok) {
-        const data = await response.json()
-        // Transform messages to include images if they exist in content
-        const transformedMessages = (data.messages || []).map((msg: any) => {
-          let images: string[] = []
-          let textContent = ''
-          
-          // Check if content is an array (multimodal format)
-          if (Array.isArray(msg.content)) {
-            // Extract images
-            const imageParts = msg.content.filter((part: any) => 
-              (part.type === 'image_url' && part.image_url?.url) ||
-              (part.type === 'image' && (part.image || part.url))
-            )
-            images = imageParts.map((part: any) => 
-              part.image_url?.url || part.image || part.url
-            )
-            
-            // Extract text
-            const textPart = msg.content.find((p: any) => p.type === 'text')
-            textContent = textPart?.text || ''
-          } else if (typeof msg.content === 'string') {
-            textContent = msg.content
-          }
-          
-          return {
-            ...msg,
-            content: textContent,
-            images: images.length > 0 ? images : undefined
-          }
-        })
-        setMessages(transformedMessages)
-      } else if (response.status === 404) {
-        // Conversation not found - clear it and start fresh
-        setMessages([])
-        if (onConversationCreated) {
-          // This will trigger the parent to clear the conversationId
-          localStorage.removeItem('currentConversationId')
-          window.location.reload()
-        }
-      } else {
-        if (process.env.NODE_ENV === 'development') {
-          console.error('Failed to load conversation')
-        }
-      }
-    } catch (error) {
-      if (process.env.NODE_ENV === 'development') {
-        console.error('Error loading conversation:', error)
-      }
-    } finally {
-      setLoadingMessages(false)
-    }
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -277,19 +278,19 @@ export function ChatInterface({ conversationId, onConversationCreated }: ChatInt
           errorData = await response.json()
         } catch (e) {
           // If we can't parse the error response, use a default message
-          errorData = { error: 'Unknown error occurred' }
+          errorData = { error: 'Une erreur inconnue s\'est produite' }
         }
         
         if (response.status === 404 && errorData.error === 'Conversation not found') {
           // Conversation was deleted or doesn't exist, clear it and reload
           localStorage.removeItem('currentConversationId')
-          alert('This conversation no longer exists. Starting a new chat.')
+          alert('Cette conversation n\'existe plus. Démarrage d\'une nouvelle conversation.')
           window.location.reload()
           return
         }
         
         // For other errors, throw with a descriptive message
-        const errorMessage = errorData.error || errorData.message || 'Failed to send message'
+        const errorMessage = errorData.error || errorData.message || 'Échec de l\'envoi du message'
         throw new Error(errorMessage)
       }
 
@@ -359,7 +360,7 @@ export function ChatInterface({ conversationId, onConversationCreated }: ChatInt
           setMessages(prev => prev.filter(m => 
             !(m.id.startsWith('temp-assistant') && m.role === 'assistant')
           ))
-          throw new Error('Failed to read response stream')
+          throw new Error('Échec de la lecture du flux de réponse')
         } finally {
           // Release the reader
           try {
@@ -392,7 +393,7 @@ export function ChatInterface({ conversationId, onConversationCreated }: ChatInt
       // Show user-friendly error message
       const errorMessage = error instanceof Error 
         ? error.message 
-        : 'Failed to send message. Please try again.'
+        : 'Échec de l\'envoi du message. Veuillez réessayer.'
       alert(errorMessage)
     } finally {
       setIsLoading(false)
@@ -410,10 +411,7 @@ export function ChatInterface({ conversationId, onConversationCreated }: ChatInt
   if (loadingMessages) {
     return (
       <div className="flex h-full items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
-          <p className="mt-4 text-sm text-muted-foreground">Loading conversation...</p>
-        </div>
+        <LoadingSpinner size="lg" text="Chargement de la conversation..." variant="default" />
       </div>
     )
   }
@@ -433,10 +431,10 @@ export function ChatInterface({ conversationId, onConversationCreated }: ChatInt
             <div className="aui-thread-welcome-center flex w-full flex-grow flex-col items-center justify-center">
               <div className="aui-thread-welcome-message flex size-full flex-col justify-center px-8">
                 <div className="aui-thread-welcome-message-motion-1 text-2xl font-semibold">
-                  Hello there!
+                  Bonjour !
                 </div>
                 <div className="aui-thread-welcome-message-motion-2 text-2xl text-muted-foreground/65">
-                  How can I help you today?
+                  Comment puis-je vous aider aujourd'hui ?
                 </div>
               </div>
             </div>
@@ -460,7 +458,7 @@ export function ChatInterface({ conversationId, onConversationCreated }: ChatInt
                       <div key={idx} className="relative rounded-lg overflow-hidden border border-border max-w-[200px]">
                         <img 
                           src={img} 
-                          alt={`Uploaded image ${idx + 1}`}
+                          alt={`Image téléchargée ${idx + 1}`}
                           className="max-w-full h-auto"
                         />
                       </div>
@@ -508,14 +506,14 @@ export function ChatInterface({ conversationId, onConversationCreated }: ChatInt
                     <div key={idx} className="relative rounded-lg overflow-hidden border border-border max-w-[100px] group">
                       <img 
                         src={img} 
-                        alt={`Preview ${idx + 1}`}
+                        alt={`Aperçu ${idx + 1}`}
                         className="max-w-full h-auto"
                       />
                       <button
                         type="button"
                         onClick={() => removeImage(idx)}
                         className="absolute top-1 right-1 bg-black/50 hover:bg-black/70 rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                        aria-label="Remove image"
+                        aria-label="Supprimer l'image"
                       >
                         <X className="size-3 text-white" />
                       </button>
@@ -528,12 +526,12 @@ export function ChatInterface({ conversationId, onConversationCreated }: ChatInt
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="Send a message..."
+                placeholder="Envoyer un message..."
                 disabled={isLoading}
                 className="aui-composer-input mb-1 max-h-32 min-h-16 w-full resize-none bg-transparent px-3.5 pt-1.5 pb-3 text-base outline-none placeholder:text-muted-foreground focus-visible:ring-0"
                 rows={1}
                 autoFocus
-                aria-label="Message input"
+                aria-label="Saisie de message"
                 style={{
                   height: 'auto',
                 }}
@@ -550,7 +548,7 @@ export function ChatInterface({ conversationId, onConversationCreated }: ChatInt
                 multiple
                 onChange={handleImageSelect}
                 className="hidden"
-                aria-label="Upload images"
+                aria-label="Télécharger des images"
               />
               <div className="aui-composer-action-wrapper relative mx-1 mt-2 mb-2 flex items-center justify-between">
                 <Button
@@ -560,7 +558,7 @@ export function ChatInterface({ conversationId, onConversationCreated }: ChatInt
                   onClick={() => fileInputRef.current?.click()}
                   disabled={isLoading}
                   className="size-[34px] rounded-full"
-                  aria-label="Upload image"
+                  aria-label="Télécharger une image"
                 >
                   <ImageIcon className="size-5" />
                 </Button>
@@ -571,7 +569,7 @@ export function ChatInterface({ conversationId, onConversationCreated }: ChatInt
                     size="icon"
                     disabled={!input.trim() && selectedImages.length === 0}
                     className="aui-composer-send size-[34px] rounded-full p-1"
-                    aria-label="Send message"
+                    aria-label="Envoyer le message"
                   >
                     <ArrowUpIcon className="aui-composer-send-icon size-5" />
                   </Button>
@@ -581,7 +579,7 @@ export function ChatInterface({ conversationId, onConversationCreated }: ChatInt
                     variant="default"
                     size="icon"
                     className="aui-composer-cancel size-[34px] rounded-full border border-muted-foreground/60 hover:bg-primary/75 dark:border-muted-foreground/90"
-                    aria-label="Stop generating"
+                    aria-label="Arrêter la génération"
                   >
                     <Square className="aui-composer-cancel-icon size-3.5 fill-white dark:fill-black" />
                   </Button>

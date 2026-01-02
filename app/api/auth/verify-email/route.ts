@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
     // Validate input - need either token or code
     if (!token && !code) {
       return NextResponse.json(
-        { error: 'Verification token or code is required' },
+        { error: 'Le jeton ou le code de vérification est requis' },
         { status: 400 }
       )
     }
@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
 
     if (!verificationToken) {
       return NextResponse.json(
-        { error: 'Invalid or expired verification token' },
+        { error: 'Jeton de vérification invalide ou expiré' },
         { status: 400 }
       )
     }
@@ -52,7 +52,7 @@ export async function GET(request: NextRequest) {
 
       return NextResponse.json({
         success: true,
-        message: 'Email is already verified',
+        message: 'L\'email est déjà vérifié',
         alreadyVerified: true,
       })
     }
@@ -83,7 +83,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: 'Email verified successfully',
+      message: 'Email vérifié avec succès',
       user: {
         id: verificationToken.user.id,
         email: verificationToken.user.email,
@@ -94,7 +94,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Email verification error:', error)
     return NextResponse.json(
-      { error: 'An error occurred during email verification' },
+      { error: 'Une erreur s\'est produite lors de la vérification de l\'email' },
       { status: 500 }
     )
   }
@@ -109,14 +109,14 @@ export async function POST(request: NextRequest) {
     // Validate input
     if (!code) {
       return NextResponse.json(
-        { error: 'Verification code is required' },
+        { error: 'Le code de vérification est requis' },
         { status: 400 }
       )
     }
 
     if (!email) {
       return NextResponse.json(
-        { error: 'Email is required' },
+        { error: 'L\'email est requis' },
         { status: 400 }
       )
     }
@@ -139,7 +139,7 @@ export async function POST(request: NextRequest) {
 
     if (!user || user.emailVerificationTokens.length === 0) {
       return NextResponse.json(
-        { error: 'Invalid or expired verification code' },
+        { error: 'Code de vérification invalide ou expiré' },
         { status: 400 }
       )
     }
@@ -156,7 +156,7 @@ export async function POST(request: NextRequest) {
 
       return NextResponse.json({
         success: true,
-        message: 'Email is already verified',
+        message: 'L\'email est déjà vérifié',
         alreadyVerified: true,
       })
     }
@@ -187,7 +187,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: 'Email verified successfully',
+      message: 'Email vérifié avec succès',
       user: {
         id: user.id,
         email: user.email,
@@ -198,7 +198,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Email verification error:', error)
     return NextResponse.json(
-      { error: 'An error occurred during email verification' },
+      { error: 'Une erreur s\'est produite lors de la vérification de l\'email' },
       { status: 500 }
     )
   }

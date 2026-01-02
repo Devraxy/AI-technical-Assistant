@@ -22,12 +22,12 @@ export default function SignupPage() {
 
     // Client-side validation
     if (password !== confirmPassword) {
-      setError('Passwords do not match')
+      setError('Les mots de passe ne correspondent pas')
       return
     }
 
     if (password.length < 6) {
-      setError('Password must be at least 6 characters long')
+      setError('Le mot de passe doit contenir au moins 6 caractères')
       return
     }
 
@@ -45,7 +45,7 @@ export default function SignupPage() {
       const data = await response.json()
 
       if (!response.ok) {
-        setError(data.error || 'An error occurred')
+        setError(data.error || 'Une erreur s\'est produite')
       } else {
         // Signup successful - show verification message
         if (data.requiresVerification) {
@@ -57,7 +57,7 @@ export default function SignupPage() {
         }
       }
     } catch (error) {
-      setError('An error occurred during signup')
+      setError('Une erreur s\'est produite lors de l\'inscription')
     } finally {
       setLoading(false)
     }
@@ -84,20 +84,20 @@ export default function SignupPage() {
               </svg>
             </div>
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-              Check Your Email
+              Vérifiez votre email
             </h1>
             <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-              We've sent a verification email to <strong>{email}</strong>
+              Nous avons envoyé un email de vérification à <strong>{email}</strong>
             </p>
             <p className="mt-4 text-sm text-gray-600 dark:text-gray-400">
-              Click the link in the email or enter the verification code to complete your registration.
+              Cliquez sur le lien dans l'email ou entrez le code de vérification pour compléter votre inscription.
             </p>
             <div className="mt-6 space-y-4">
               <Button
                 onClick={() => router.push('/verify-email')}
                 className="w-full"
               >
-                Go to Verification Page
+                Aller à la page de vérification
               </Button>
               <Button
                 onClick={() => {
@@ -110,7 +110,7 @@ export default function SignupPage() {
                 variant="outline"
                 className="w-full"
               >
-                Sign Up with Different Email
+                S'inscrire avec un autre email
               </Button>
             </div>
           </div>
@@ -124,10 +124,10 @@ export default function SignupPage() {
       <div className="w-full max-w-md space-y-8 rounded-lg bg-white p-8 shadow-lg dark:bg-gray-900">
         <div className="text-center">
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-            Create Account
+            Créer un compte
           </h1>
           <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-            Sign up to get started
+            Inscrivez-vous pour commencer
           </p>
         </div>
 
@@ -138,7 +138,7 @@ export default function SignupPage() {
                 htmlFor="name"
                 className="block text-sm font-medium text-gray-700 dark:text-gray-300"
               >
-                Name (Optional)
+                Nom (Optionnel)
               </label>
               <Input
                 id="name"
@@ -177,7 +177,7 @@ export default function SignupPage() {
                 htmlFor="password"
                 className="block text-sm font-medium text-gray-700 dark:text-gray-300"
               >
-                Password
+                Mot de passe
               </label>
               <Input
                 id="password"
@@ -192,7 +192,7 @@ export default function SignupPage() {
                 minLength={6}
               />
               <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                Must be at least 6 characters
+                Doit contenir au moins 6 caractères
               </p>
             </div>
 
@@ -201,7 +201,7 @@ export default function SignupPage() {
                 htmlFor="confirmPassword"
                 className="block text-sm font-medium text-gray-700 dark:text-gray-300"
               >
-                Confirm Password
+                Confirmer le mot de passe
               </label>
               <Input
                 id="confirmPassword"
@@ -229,18 +229,18 @@ export default function SignupPage() {
             disabled={loading}
             className="w-full"
           >
-            {loading ? 'Creating account...' : 'Sign up'}
+            {loading ? 'Création du compte...' : 'S\'inscrire'}
           </Button>
         </form>
 
         <div className="mt-4 text-center text-sm text-gray-600 dark:text-gray-400">
           <p>
-            Already have an account?{' '}
+            Vous avez déjà un compte ?{' '}
             <Link
               href="/login"
               className="font-medium text-blue-600 hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300"
             >
-              Sign in
+              Se connecter
             </Link>
           </p>
         </div>

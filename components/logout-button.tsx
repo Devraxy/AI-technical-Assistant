@@ -35,7 +35,7 @@ export function LogoutButton() {
       disabled={isLoading}
     >
       <LogOut className="h-4 w-4" />
-      {isLoading ? 'Logging out...' : 'Logout'}
+      {isLoading ? 'Déconnexion...' : 'Déconnexion'}
     </Button>
   )
 }

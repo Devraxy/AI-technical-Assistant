@@ -30,10 +30,10 @@ export async function GET() {
     return NextResponse.json({ conversations })
   } catch (error: any) {
     if (error.message === 'Unauthorized') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
     }
     return NextResponse.json(
-      { error: 'Failed to fetch conversations' },
+      { error: 'Échec de la récupération des conversations' },
       { status: 500 }
     )
   }
@@ -49,7 +49,7 @@ export async function POST() {
     const conversation = await prisma.conversation.create({
       data: {
         userId: user.id,
-        title: 'New Conversation',
+        title: 'Nouvelle conversation',
       },
     })
 
@@ -57,10 +57,10 @@ export async function POST() {
     return NextResponse.json({ conversation })
   } catch (error: any) {
     if (error.message === 'Unauthorized') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
     }
     return NextResponse.json(
-      { error: 'Failed to create conversation' },
+      { error: 'Échec de la création de la conversation' },
       { status: 500 }
     )
   }

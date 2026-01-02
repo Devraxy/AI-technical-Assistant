@@ -24,7 +24,7 @@ export async function PATCH(
     // Validate input
     if (!['active', 'suspended', 'disabled'].includes(status)) {
       return NextResponse.json(
-        { error: 'status must be one of: active, suspended, disabled' },
+        { error: 'Le statut doit être l\'un des suivants : active, suspended, disabled' },
         { status: 400 }
       )
     }
@@ -32,7 +32,7 @@ export async function PATCH(
     // Prevent admin from modifying themselves
     if (userId === admin.id) {
       return NextResponse.json(
-        { error: 'Cannot modify your own account status' },
+        { error: 'Impossible de modifier le statut de votre propre compte' },
         { status: 400 }
       )
     }
@@ -57,9 +57,9 @@ export async function PATCH(
     }
 
     const statusMessages = {
-      active: 'User activated successfully',
-      suspended: 'User suspended successfully',
-      disabled: 'User disabled successfully',
+      active: 'Utilisateur activé avec succès',
+      suspended: 'Utilisateur suspendu avec succès',
+      disabled: 'Utilisateur désactivé avec succès',
     }
 
     return NextResponse.json({
@@ -69,13 +69,13 @@ export async function PATCH(
     })
   } catch (error: any) {
     if (error.message === 'Unauthorized') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
     }
     if (error.message?.includes('Forbidden')) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+      return NextResponse.json({ error: 'Interdit' }, { status: 403 })
     }
     return NextResponse.json(
-      { error: 'An error occurred' },
+      { error: 'Une erreur s\'est produite' },
       { status: 500 }
     )
   }
@@ -97,7 +97,7 @@ export async function DELETE(
     // Prevent admin from deleting themselves
     if (userId === admin.id) {
       return NextResponse.json(
-        { error: 'Cannot delete your own account' },
+        { error: 'Impossible de supprimer votre propre compte' },
         { status: 400 }
       )
     }
@@ -109,17 +109,17 @@ export async function DELETE(
 
     return NextResponse.json({
       success: true,
-      message: 'User deleted successfully',
+      message: 'Utilisateur supprimé avec succès',
     })
   } catch (error: any) {
     if (error.message === 'Unauthorized') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
     }
     if (error.message?.includes('Forbidden')) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+      return NextResponse.json({ error: 'Interdit' }, { status: 403 })
     }
     return NextResponse.json(
-      { error: 'An error occurred' },
+      { error: 'Une erreur s\'est produite' },
       { status: 500 }
     )
   }

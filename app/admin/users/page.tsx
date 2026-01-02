@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
+import { LoadingSpinner } from '@/components/ui/loading-spinner'
 import { ArrowLeft, UserCheck, UserX, Trash2 } from 'lucide-react'
 
 interface User {
@@ -45,11 +46,11 @@ export default function AdminUsersPage() {
         const data = await response.json()
         setUsers(data.users)
       } else if (response.status === 403) {
-        alert('Access denied. Admin privileges required.')
+        alert('Accès refusé. Privilèges administrateur requis.')
         router.push('/')
       }
     } catch (error) {
-      alert('Failed to load users')
+      alert('Échec du chargement des utilisateurs')
     } finally {
       setLoading(false)
     }
@@ -57,12 +58,12 @@ export default function AdminUsersPage() {
 
   async function updateUserStatus(userId: string, newStatus: 'active' | 'suspended' | 'disabled') {
     const statusLabels = {
-      active: 'activate',
-      suspended: 'suspend',
-      disabled: 'disable',
+      active: 'activer',
+      suspended: 'suspendre',
+      disabled: 'désactiver',
     }
 
-    if (!confirm(`Are you sure you want to ${statusLabels[newStatus]} this user?`)) {
+    if (!confirm(`Êtes-vous sûr de vouloir ${statusLabels[newStatus]} cet utilisateur ?`)) {
       return
     }
 
@@ -79,15 +80,15 @@ export default function AdminUsersPage() {
         fetchUsers()
       } else {
         const data = await response.json()
-        alert(data.error || 'Failed to update user')
+        alert(data.error || 'Échec de la mise à jour de l\'utilisateur')
       }
     } catch (error) {
-      alert('Failed to update user')
+      alert('Échec de la mise à jour de l\'utilisateur')
     }
   }
 
   async function deleteUser(userId: string, userEmail: string) {
-    if (!confirm(`Are you sure you want to permanently delete ${userEmail}? This action cannot be undone.`)) {
+    if (!confirm(`Êtes-vous sûr de vouloir supprimer définitivement ${userEmail} ? Cette action ne peut pas être annulée.`)) {
       return
     }
 
@@ -102,20 +103,17 @@ export default function AdminUsersPage() {
         fetchUsers()
       } else {
         const data = await response.json()
-        alert(data.error || 'Failed to delete user')
+        alert(data.error || 'Échec de la suppression de l\'utilisateur')
       }
     } catch (error) {
-      alert('Failed to delete user')
+      alert('Échec de la suppression de l\'utilisateur')
     }
   }
 
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
-        <div className="text-center">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-gray-300 border-t-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading users...</p>
-        </div>
+        <LoadingSpinner size="lg" text="Chargement des utilisateurs..." variant="default" />
       </div>
     )
   }
@@ -131,9 +129,9 @@ export default function AdminUsersPage() {
               onClick={() => router.push('/')}
             >
               <ArrowLeft className="h-4 w-4" />
-              Back to Home
+              Retour à l'accueil
             </Button>
-            <h1 className="text-3xl font-bold">User Management</h1>
+            <h1 className="text-3xl font-bold">Gestion des utilisateurs</h1>
           </div>
         </div>
 
@@ -143,19 +141,19 @@ export default function AdminUsersPage() {
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    User
+                    Utilisateur
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Email
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Role
+                    Rôle
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
+                    Statut
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Created
+                    Créé le
                   </th>
                   <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Actions
@@ -165,9 +163,9 @@ export default function AdminUsersPage() {
               <tbody className="bg-white divide-y divide-gray-200">
                 {users.map((user) => {
                   const statusConfig = {
-                    active: { bg: 'bg-green-100', text: 'text-green-800', label: 'Active' },
-                    suspended: { bg: 'bg-yellow-100', text: 'text-yellow-800', label: 'Suspended' },
-                    disabled: { bg: 'bg-red-100', text: 'text-red-800', label: 'Disabled' },
+                    active: { bg: 'bg-green-100', text: 'text-green-800', label: 'Actif' },
+                    suspended: { bg: 'bg-yellow-100', text: 'text-yellow-800', label: 'Suspendu' },
+                    disabled: { bg: 'bg-red-100', text: 'text-red-800', label: 'Désactivé' },
                   }
                   const config = statusConfig[user.status]
 
@@ -175,9 +173,9 @@ export default function AdminUsersPage() {
                     <tr key={user.id} className={user.status !== 'active' ? 'bg-gray-50' : ''}>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm font-medium text-gray-900">
-                          {user.name || 'No name'}
+                          {user.name || 'Aucun nom'}
                           {currentUser?.id === user.id && (
-                            <span className="ml-2 text-xs text-blue-600">(You)</span>
+                            <span className="ml-2 text-xs text-blue-600">(Vous)</span>
                           )}
                         </div>
                       </td>
@@ -216,7 +214,7 @@ export default function AdminUsersPage() {
                                   onClick={() => updateUserStatus(user.id, 'active')}
                                 >
                                   <UserCheck className="h-4 w-4" />
-                                  Activate
+                                  Activer
                                 </Button>
                               )}
                               {user.status !== 'suspended' && (
@@ -226,7 +224,7 @@ export default function AdminUsersPage() {
                                   onClick={() => updateUserStatus(user.id, 'suspended')}
                                 >
                                   <UserX className="h-4 w-4" />
-                                  Suspend
+                                  Suspendre
                                 </Button>
                               )}
                               {user.status !== 'disabled' && (
@@ -236,7 +234,7 @@ export default function AdminUsersPage() {
                                   onClick={() => updateUserStatus(user.id, 'disabled')}
                                 >
                                   <UserX className="h-4 w-4" />
-                                  Disable
+                                  Désactiver
                                 </Button>
                               )}
                               <Button
@@ -245,13 +243,13 @@ export default function AdminUsersPage() {
                                 onClick={() => deleteUser(user.id, user.email)}
                               >
                                 <Trash2 className="h-4 w-4" />
-                                Delete
+                                Supprimer
                               </Button>
                             </>
                           )}
                           {currentUser?.id === user.id && (
                             <span className="text-xs text-gray-500 py-2">
-                              Cannot modify own account
+                              Impossible de modifier votre propre compte
                             </span>
                           )}
                         </div>
@@ -266,7 +264,7 @@ export default function AdminUsersPage() {
 
         {users.length === 0 && (
           <div className="text-center py-12 text-gray-500">
-            No users found
+            Aucun utilisateur trouvé
           </div>
         )}
       </div>

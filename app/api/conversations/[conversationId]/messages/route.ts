@@ -37,7 +37,7 @@ export async function GET(
 
     if (!conversation) {
       return NextResponse.json(
-        { error: 'Conversation not found' },
+        { error: 'Conversation introuvable' },
         { status: 404 }
       )
     }
@@ -77,24 +77,62 @@ export async function GET(
           const parsedContent = JSON.parse(msg.content);
           if (Array.isArray(parsedContent)) {
             // This is multimodal content (text + images)
-            // Ensure images are in the correct format
+            // Ensure images are in the correct format and validate them
             content = parsedContent.map((part: any) => {
               if (part.type === 'text') {
                 return { type: 'text' as const, text: part.text || '' };
               } else if (part.type === 'image_url' && part.image_url?.url) {
-                // Return image in image_url format
+                const url = part.image_url.url;
+                // Validate image URL before including it
+                if (url.startsWith('data:image/')) {
+                  // Validate data URL format
+                  const dataUrlMatch = url.match(/^data:image\/(jpeg|jpg|png|gif|webp);base64,(.+)$/);
+                  if (!dataUrlMatch || !dataUrlMatch[2] || dataUrlMatch[2].trim().length === 0) {
+                    // Invalid image data, skip it
+                    return null;
+                  }
+                  // Validate base64 format
+                  const base64Data = dataUrlMatch[2].replace(/\s/g, '');
+                  if (!/^[A-Za-z0-9+/=]+$/.test(base64Data) || base64Data.length < 100) {
+                    // Invalid base64 or too short, skip it
+                    return null;
+                  }
+                } else if (!url.startsWith('http://') && !url.startsWith('https://')) {
+                  // Invalid URL format, skip it
+                  return null;
+                }
+                // Return validated image in image_url format
                 return {
                   type: 'image_url' as const,
                   image_url: {
-                    url: part.image_url.url,
+                    url: url,
                   },
                 };
               } else if (part.type === 'image' && (part.image || part.url)) {
+                const imageUrl = part.image || part.url;
+                // Validate image URL before including it
+                if (imageUrl.startsWith('data:image/')) {
+                  // Validate data URL format
+                  const dataUrlMatch = imageUrl.match(/^data:image\/(jpeg|jpg|png|gif|webp);base64,(.+)$/);
+                  if (!dataUrlMatch || !dataUrlMatch[2] || dataUrlMatch[2].trim().length === 0) {
+                    // Invalid image data, skip it
+                    return null;
+                  }
+                  // Validate base64 format
+                  const base64Data = dataUrlMatch[2].replace(/\s/g, '');
+                  if (!/^[A-Za-z0-9+/=]+$/.test(base64Data) || base64Data.length < 100) {
+                    // Invalid base64 or too short, skip it
+                    return null;
+                  }
+                } else if (!imageUrl.startsWith('http://') && !imageUrl.startsWith('https://')) {
+                  // Invalid URL format, skip it
+                  return null;
+                }
                 // Convert to image_url format
                 return {
                   type: 'image_url' as const,
                   image_url: {
-                    url: part.image || part.url,
+                    url: imageUrl,
                   },
                 };
               }
@@ -131,10 +169,10 @@ export async function GET(
     return NextResponse.json({ messages })
   } catch (error: any) {
     if (error.message === 'Unauthorized') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
     }
     return NextResponse.json(
-      { error: 'Failed to fetch messages' },
+      { error: 'Échec de la récupération des messages' },
       { status: 500 }
     )
   }

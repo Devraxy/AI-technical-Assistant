@@ -61,7 +61,7 @@ export function ThreadListSidebar({
                   <span className="aui-sidebar-footer-title font-semibold">
                     GitHub
                   </span>
-                  <span>View Source</span>
+                    <span>Voir le code source</span>
                 </div>
               </Link>
             </SidebarMenuButton>
