@@ -70,7 +70,7 @@ const AttachmentPreview: FC<AttachmentPreviewProps> = ({ src }) => {
   return (
     <Image
       src={src}
-      alt="Image Preview"
+      alt="Aperçu de l'image"
       width={1}
       height={1}
       className={
@@ -99,7 +99,7 @@ const AttachmentPreviewDialog: FC<PropsWithChildren> = ({ children }) => {
       </DialogTrigger>
       <DialogContent className="aui-attachment-preview-dialog-content p-2 sm:max-w-3xl [&_svg]:text-background [&>button]:rounded-full [&>button]:bg-foreground/60 [&>button]:p-1 [&>button]:opacity-100 [&>button]:!ring-0 [&>button]:hover:[&_svg]:text-destructive">
         <DialogTitle className="aui-sr-only sr-only">
-          Image Attachment Preview
+          Aperçu de la pièce jointe image
         </DialogTitle>
         <div className="aui-attachment-preview relative mx-auto flex max-h-[80dvh] w-full items-center justify-center overflow-hidden bg-background">
           <AttachmentPreview src={src} />
@@ -119,7 +119,7 @@ const AttachmentThumb: FC = () => {
     <Avatar className="aui-attachment-tile-avatar h-full w-full rounded-none">
       <AvatarImage
         src={src}
-        alt="Attachment preview"
+        alt="Aperçu de la pièce jointe"
         className="aui-attachment-tile-image object-cover"
       />
       <AvatarFallback delayMs={isImage ? 200 : 0}>
@@ -147,7 +147,7 @@ const AttachmentUI: FC = () => {
         return "Fichier";
       default:
         const _exhaustiveCheck: never = type;
-        throw new Error(`Unknown attachment type: ${_exhaustiveCheck}`);
+        throw new Error(`Type de pièce jointe inconnu : ${_exhaustiveCheck}`);
     }
   });
 
@@ -170,7 +170,7 @@ const AttachmentUI: FC = () => {
               )}
               role="button"
               id="attachment-tile"
-              aria-label={`${typeLabel} attachment`}
+              aria-label={`Pièce jointe ${typeLabel.toLowerCase()}`}
             >
               <AttachmentThumb />
             </div>
@@ -189,7 +189,7 @@ const AttachmentRemove: FC = () => {
   return (
     <AttachmentPrimitive.Remove asChild>
       <TooltipIconButton
-        tooltip="Remove file"
+        tooltip="Supprimer la pièce jointe"
         className="aui-attachment-tile-remove absolute top-1.5 right-1.5 size-3.5 rounded-full bg-white text-muted-foreground opacity-100 shadow-sm hover:!bg-white [&_svg]:text-black hover:[&_svg]:text-destructive"
         side="top"
       >
@@ -221,12 +221,12 @@ export const ComposerAddAttachment: FC = () => {
   return (
     <ComposerPrimitive.AddAttachment asChild>
       <TooltipIconButton
-        tooltip="Add Attachment"
+        tooltip="Ajouter une pièce jointe"
         side="bottom"
         variant="ghost"
         size="icon"
         className="aui-composer-add-attachment size-[34px] rounded-full p-1 text-xs font-semibold hover:bg-muted-foreground/15 dark:border-muted-foreground/15 dark:hover:bg-muted-foreground/30"
-        aria-label="Add Attachment"
+        aria-label="Ajouter une pièce jointe"
       >
         <PlusIcon className="aui-attachment-add-icon size-5 stroke-[1.5px]" />
       </TooltipIconButton>
