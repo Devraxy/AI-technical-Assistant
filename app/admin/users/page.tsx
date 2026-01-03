@@ -227,16 +227,6 @@ export default function AdminUsersPage() {
                                   Suspendre
                                 </Button>
                               )}
-                              {user.status !== 'disabled' && (
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => updateUserStatus(user.id, 'disabled')}
-                                >
-                                  <UserX className="h-4 w-4" />
-                                  Désactiver
-                                </Button>
-                              )}
                               <Button
                                 variant="destructive"
                                 size="sm"
