@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { PlusIcon, MessageSquare, Trash2 } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
 import { format } from 'date-fns'
+import { fr } from 'date-fns/locale'
 
 interface Conversation {
   id: string
@@ -109,13 +110,13 @@ function ConversationListComponent({
     const diffInHours = (now.getTime() - date.getTime()) / (1000 * 60 * 60)
 
     if (diffInHours < 24) {
-      return format(date, 'HH:mm')
+      return format(date, 'HH:mm', { locale: fr })
     } else if (diffInHours < 48) {
       return 'Hier'
     } else if (diffInHours < 168) { // 7 days
-      return format(date, 'EEE') // Mon, Tue, etc.
+      return format(date, 'EEE', { locale: fr }) // Lun, Mar, etc.
     } else {
-      return format(date, 'MMM d') // Jan 15
+      return format(date, 'd MMM', { locale: fr }) // 15 jan
     }
   }
 
