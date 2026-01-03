@@ -190,7 +190,7 @@ export default function AdminUsersPage() {
                               : 'bg-gray-100 text-gray-800'
                           }`}
                         >
-                          {user.role}
+                          {user.role === 'admin' ? 'Administrateur' : 'Utilisateur'}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
