@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback, memo } from 'react'
+import { useEffect, useState, useCallback, memo, useRef } from 'react'
 import { Button } from '@/components/ui/button'
 import { PlusIcon, MessageSquare, Trash2 } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -32,11 +32,20 @@ function ConversationListComponent({
 }: ConversationListProps) {
   const [conversations, setConversations] = useState<Conversation[]>([])
   const [loading, setLoading] = useState(true)
+  const fetchingRef = useRef(false) // Prevent duplicate simultaneous fetches
 
   // Memoize fetchConversations to avoid recreating on every render
   const fetchConversations = useCallback(async () => {
+    // Prevent duplicate simultaneous fetches
+    if (fetchingRef.current) {
+      return
+    }
+    
+    fetchingRef.current = true
     try {
-      const response = await fetch('/api/conversations')
+      const response = await fetch('/api/conversations', {
+        cache: 'no-store', // Always get fresh data
+      })
       if (response.ok) {
         const data = await response.json()
         setConversations(data.conversations)
@@ -45,6 +54,7 @@ function ConversationListComponent({
       // Silently handle errors
     } finally {
       setLoading(false)
+      fetchingRef.current = false
     }
   }, [])
 

@@ -1,27 +1,10 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback, useMemo, memo, lazy, Suspense, startTransition } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo, memo } from 'react'
 import { Button } from '@/components/ui/button'
 import { ArrowUpIcon, Loader2, Square, ImageIcon, X } from 'lucide-react'
 import { LoadingSpinner } from '@/components/ui/loading-spinner'
-
-// Lazy load ReactMarkdown for better initial load performance
-const ReactMarkdown = lazy(() => import('react-markdown'))
-
-// Aggressively preload ReactMarkdown on page load
-if (typeof window !== 'undefined') {
-  // Use requestIdleCallback for non-blocking preload
-  if ('requestIdleCallback' in window) {
-    requestIdleCallback(() => {
-      import('react-markdown').catch(() => {})
-    }, { timeout: 2000 })
-  } else {
-    // Fallback for browsers without requestIdleCallback
-    setTimeout(() => {
-      import('react-markdown').catch(() => {})
-    }, 100)
-  }
-}
+import ReactMarkdown from 'react-markdown'
 
 interface Message {
   id: string
@@ -36,56 +19,6 @@ interface ChatInterfaceProps {
   onConversationCreated?: (conversationId: string) => void
 }
 
-// Memoized message components to prevent unnecessary re-renders
-const UserMessage = memo(({ message }: { message: Message }) => (
-  <div
-    className="aui-user-message-root mx-auto grid w-full max-w-[var(--thread-max-width)] animate-in auto-rows-auto grid-cols-[minmax(72px,1fr)_auto] gap-y-2 px-2 py-4 duration-150 ease-out fade-in slide-in-from-bottom-1 first:mt-3 last:mb-5 [&:where(>*)]:col-start-2"
-    data-role="user"
-  >
-    <div className="aui-user-message-content-wrapper relative col-start-2 min-w-0 flex flex-col gap-2">
-      {/* Images */}
-      {message.images && message.images.length > 0 && (
-        <div className="flex flex-wrap gap-2">
-          {message.images.map((img, idx) => (
-            <div key={idx} className="relative rounded-lg overflow-hidden border border-border max-w-[200px]">
-              <img 
-                src={img} 
-                alt={`Image téléchargée ${idx + 1}`}
-                className="max-w-full h-auto"
-                loading="lazy"
-                decoding="async"
-              />
-            </div>
-          ))}
-        </div>
-      )}
-      {/* Text content */}
-      {message.content && (
-        <div className="aui-user-message-content rounded-3xl bg-muted px-5 py-2.5 break-words text-foreground">
-          {message.content}
-        </div>
-      )}
-    </div>
-  </div>
-))
-UserMessage.displayName = 'UserMessage'
-
-const AssistantMessage = memo(({ message }: { message: Message }) => (
-  <div
-    className="aui-assistant-message-root relative mx-auto w-full max-w-[var(--thread-max-width)] animate-in py-4 duration-150 ease-out fade-in slide-in-from-bottom-1 last:mb-24"
-    data-role="assistant"
-  >
-    <div className="aui-assistant-message-content mx-2 leading-7 break-words text-foreground">
-      <div className="prose prose-sm dark:prose-invert max-w-none">
-        <Suspense fallback={<span>{message.content}</span>}>
-          <ReactMarkdown>{message.content}</ReactMarkdown>
-        </Suspense>
-      </div>
-    </div>
-  </div>
-))
-AssistantMessage.displayName = 'AssistantMessage'
-
 export function ChatInterface({ conversationId, onConversationCreated }: ChatInterfaceProps) {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
@@ -95,11 +28,11 @@ export function ChatInterface({ conversationId, onConversationCreated }: ChatInt
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const loadingConversationRef = useRef<string | null>(null) // Track ongoing loads to prevent duplicates
+  const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null) // For throttled scrolling
 
-  // Optimized message transformation - memoized
-  const transformMessage = useCallback((msg: any): Message | null => {
-    if (!msg?.role || msg?.content === undefined) return null
-    
+  // Optimized message transformation
+  const transformMessage = useCallback((msg: any) => {
     let images: string[] = []
     let textContent = ''
     
@@ -118,31 +51,28 @@ export function ChatInterface({ conversationId, onConversationCreated }: ChatInt
     }
     
     return {
-      id: msg.id || `msg-${Date.now()}`,
-      role: msg.role,
+      ...msg,
       content: textContent,
-      createdAt: msg.createdAt || new Date().toISOString(),
       images: images.length > 0 ? images : undefined
     }
   }, [])
 
-  // Load conversation function - optimized with caching
+  // Load conversation function - optimized with request deduplication
   const loadConversation = useCallback(async (id: string) => {
+    // Prevent duplicate simultaneous loads
+    if (loadingConversationRef.current === id) {
+      return
+    }
+    
+    loadingConversationRef.current = id
     setLoadingMessages(true)
     try {
-      // Browser will use HTTP cache based on server Cache-Control headers
       const response = await fetch(`/api/conversations/${id}/messages`)
       if (response.ok) {
         const data = await response.json()
-        // Transform messages using optimized function - filter out nulls
-        // Use startTransition for non-urgent UI updates
-        const transformedMessages = (data.messages || [])
-          .map(transformMessage)
-          .filter((msg: Message | null): msg is Message => msg !== null)
-        
-        startTransition(() => {
-          setMessages(transformedMessages)
-        })
+        // Transform messages using optimized function
+        const transformedMessages = (data.messages || []).map(transformMessage)
+        setMessages(transformedMessages)
       } else if (response.status === 404) {
         // Conversation not found - clear it and start fresh
         setMessages([])
@@ -162,6 +92,7 @@ export function ChatInterface({ conversationId, onConversationCreated }: ChatInt
       }
     } finally {
       setLoadingMessages(false)
+      loadingConversationRef.current = null
     }
   }, [transformMessage, onConversationCreated])
 
@@ -174,34 +105,47 @@ export function ChatInterface({ conversationId, onConversationCreated }: ChatInt
     }
   }, [conversationId, loadConversation])
 
-  // Optimized auto-scroll - use requestAnimationFrame for smoother scrolling
+  // Auto-scroll to bottom when messages change - throttled for performance
   useEffect(() => {
-    const rafId = requestAnimationFrame(() => {
-      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-    })
+    // Clear any pending scroll
+    if (scrollTimeoutRef.current) {
+      clearTimeout(scrollTimeoutRef.current)
+    }
     
-    return () => cancelAnimationFrame(rafId)
+    // Throttle scrolling to avoid excessive re-renders
+    scrollTimeoutRef.current = setTimeout(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+    }, 50) // Small delay to batch rapid updates
+    
+    return () => {
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current)
+      }
+    }
   }, [messages])
 
-  // Convert file to base64 data URL - optimized with size limit
-  const fileToBase64 = useCallback((file: File): Promise<string> => {
+  // Convert file to base64 data URL - optimized with requestIdleCallback for non-blocking
+  function fileToBase64(file: File): Promise<string> {
     return new Promise((resolve, reject) => {
-      // Limit file size to 10MB to prevent memory issues
-      const MAX_SIZE = 10 * 1024 * 1024 // 10MB
-      if (file.size > MAX_SIZE) {
-        reject(new Error('Fichier trop volumineux (max 10MB)'))
-        return
+      // Use requestIdleCallback if available to avoid blocking UI
+      const processFile = () => {
+        const reader = new FileReader()
+        reader.onload = () => resolve(reader.result as string)
+        reader.onerror = reject
+        reader.readAsDataURL(file)
       }
       
-      const reader = new FileReader()
-      reader.onload = () => resolve(reader.result as string)
-      reader.onerror = reject
-      reader.readAsDataURL(file)
+      if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+        requestIdleCallback(processFile, { timeout: 1000 })
+      } else {
+        // Fallback: use setTimeout to yield to browser
+        setTimeout(processFile, 0)
+      }
     })
-  }, [])
+  }
 
-  // Handle image file selection - optimized with error handling
-  const handleImageSelect = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Handle image file selection - optimized to process images incrementally
+  async function handleImageSelect(e: React.ChangeEvent<HTMLInputElement>) {
     const files = e.target.files
     if (!files) return
 
@@ -212,29 +156,31 @@ export function ChatInterface({ conversationId, onConversationCreated }: ChatInt
     }
 
     try {
-      // Process images in batches to avoid blocking
-      const base64Images = await Promise.all(imageFiles.map(fileToBase64))
-      setSelectedImages(prev => [...prev, ...base64Images])
+      // Process images incrementally to avoid blocking UI
+      const base64Images: string[] = []
+      for (const file of imageFiles) {
+        const base64 = await fileToBase64(file)
+        base64Images.push(base64)
+        // Update state incrementally so UI shows progress
+        setSelectedImages(prev => [...prev, base64])
+      }
     } catch (error) {
-      if (process.env.NODE_ENV === 'development') {
-        console.error('Error converting images:', error)
-      }
-      const errorMessage = error instanceof Error ? error.message : 'Échec du traitement des images'
-      alert(errorMessage)
-    } finally {
-      // Reset input
-      if (fileInputRef.current) {
-        fileInputRef.current.value = ''
-      }
+      console.error('Error converting images:', error)
+      alert('Échec du traitement des images')
     }
-  }, [fileToBase64])
+
+    // Reset input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''
+    }
+  }
 
   // Remove an image from selection
-  const removeImage = useCallback((index: number) => {
+  function removeImage(index: number) {
     setSelectedImages(prev => prev.filter((_, i) => i !== index))
-  }, [])
+  }
 
-  const handleSubmit = useCallback(async (e: React.FormEvent) => {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if ((!input.trim() && selectedImages.length === 0) || isLoading) return
 
@@ -340,15 +286,21 @@ export function ChatInterface({ conversationId, onConversationCreated }: ChatInt
         }
       ]
 
-      // Debug logging only in development
-      if (process.env.NODE_ENV === 'development') {
-        console.log('🔍 [Frontend DEBUG] Sending message with parts:', {
-          historyCount: historyMessages.length,
-          partsCount: parts.length,
-          imageCount: parts.filter(p => p.type === 'image').length,
-          textCount: parts.filter(p => p.type === 'text').length,
-        });
-      }
+      // Debug: Log what we're sending (ALWAYS show - remove condition)
+      console.log('🔍 [Frontend DEBUG] Sending message with parts:', {
+        historyCount: historyMessages.length,
+        partsCount: parts.length,
+        imageCount: parts.filter(p => p.type === 'image').length,
+        textCount: parts.filter(p => p.type === 'text').length,
+        imageLengths: parts.filter(p => p.type === 'image').map(p => p.image?.length || 0),
+        imagePreviews: parts.filter(p => p.type === 'image').map(p => p.image?.substring(0, 50) || 'none'),
+        fullParts: parts, // Show full parts array
+      });
+      
+      console.log('🔍 [Frontend DEBUG] Full request body:', JSON.stringify({
+        messages: allMessages,
+        conversationId: conversationId,
+      }, null, 2));
 
       const response = await fetch('/api/chat', {
         method: 'POST',
@@ -411,24 +363,22 @@ export function ChatInterface({ conversationId, onConversationCreated }: ChatInt
                   if (data.type === 'text-delta' && data.textDelta) {
                     assistantMessage += data.textDelta
 
-                    // Update assistant message in real-time - use startTransition for smoother updates
-                    startTransition(() => {
-                      setMessages(prev => {
-                        const newMessages = [...prev]
-                        const lastMessage = newMessages[newMessages.length - 1]
+                    // Update assistant message in real-time
+                    setMessages(prev => {
+                      const newMessages = [...prev]
+                      const lastMessage = newMessages[newMessages.length - 1]
 
-                        if (lastMessage && lastMessage.role === 'assistant' && lastMessage.id.startsWith('temp-assistant')) {
-                          lastMessage.content = assistantMessage
-                        } else {
-                          newMessages.push({
-                            id: `temp-assistant-${Date.now()}`,
-                            role: 'assistant',
-                            content: assistantMessage,
-                            createdAt: new Date().toISOString(),
-                          })
-                        }
-                        return newMessages
-                      })
+                      if (lastMessage && lastMessage.role === 'assistant' && lastMessage.id.startsWith('temp-assistant')) {
+                        lastMessage.content = assistantMessage
+                      } else {
+                        newMessages.push({
+                          id: `temp-assistant-${Date.now()}`,
+                          role: 'assistant',
+                          content: assistantMessage,
+                          createdAt: new Date().toISOString(),
+                        })
+                      }
+                      return newMessages
                     })
                   }
                 } catch (e) {
@@ -460,15 +410,16 @@ export function ChatInterface({ conversationId, onConversationCreated }: ChatInt
         }
       }
 
-      // Only reload conversation if streaming completed successfully
-      if (!streamingError) {
-        // Reload conversation to get actual IDs from database
-        if (newConversationId) {
-          await loadConversation(newConversationId)
-        } else if (conversationId) {
-          await loadConversation(conversationId)
-        }
+      // OPTIMIZATION: Don't reload conversation after streaming - we already have the messages
+      // The temporary messages are fine to keep, and reloading causes unnecessary delay
+      // Only update conversation ID if we got a new one
+      if (!streamingError && newConversationId && !conversationId && onConversationCreated) {
+        onConversationCreated(newConversationId)
       }
+      
+      // Update temporary message IDs to permanent ones if we have them
+      // This is done by keeping the temp messages - they work fine as-is
+      // The next time the conversation loads, it will have the real IDs
     } catch (error) {
       if (process.env.NODE_ENV === 'development') {
         console.error('Error sending message:', error)
@@ -488,14 +439,14 @@ export function ChatInterface({ conversationId, onConversationCreated }: ChatInt
       setIsLoading(false)
       textareaRef.current?.focus()
     }
-  }, [input, selectedImages, isLoading, messages, conversationId, onConversationCreated, loadConversation])
+  }
 
-  const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+  function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
       handleSubmit(e as any)
     }
-  }, [handleSubmit])
+  }
 
   if (loadingMessages) {
     return (
@@ -530,14 +481,53 @@ export function ChatInterface({ conversationId, onConversationCreated }: ChatInt
           </div>
         )}
 
-        {/* Messages - using memoized components */}
-        {messages.map((message) => 
+        {/* Messages */}
+        {messages.map((message) => (
           message.role === 'user' ? (
-            <UserMessage key={message.id} message={message} />
+            // User message matching Thread
+            <div
+              key={message.id}
+              className="aui-user-message-root mx-auto grid w-full max-w-[var(--thread-max-width)] animate-in auto-rows-auto grid-cols-[minmax(72px,1fr)_auto] gap-y-2 px-2 py-4 duration-150 ease-out fade-in slide-in-from-bottom-1 first:mt-3 last:mb-5 [&:where(>*)]:col-start-2"
+              data-role="user"
+            >
+              <div className="aui-user-message-content-wrapper relative col-start-2 min-w-0 flex flex-col gap-2">
+                {/* Images */}
+                {message.images && message.images.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {message.images.map((img, idx) => (
+                      <div key={idx} className="relative rounded-lg overflow-hidden border border-border max-w-[200px]">
+                        <img 
+                          src={img} 
+                          alt={`Image téléchargée ${idx + 1}`}
+                          className="max-w-full h-auto"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {/* Text content */}
+                {message.content && (
+                  <div className="aui-user-message-content rounded-3xl bg-muted px-5 py-2.5 break-words text-foreground">
+                    {message.content}
+                  </div>
+                )}
+              </div>
+            </div>
           ) : (
-            <AssistantMessage key={message.id} message={message} />
+            // Assistant message matching Thread
+            <div
+              key={message.id}
+              className="aui-assistant-message-root relative mx-auto w-full max-w-[var(--thread-max-width)] animate-in py-4 duration-150 ease-out fade-in slide-in-from-bottom-1 last:mb-24"
+              data-role="assistant"
+            >
+              <div className="aui-assistant-message-content mx-2 leading-7 break-words text-foreground">
+                <div className="prose prose-sm dark:prose-invert max-w-none">
+                  <ReactMarkdown>{message.content}</ReactMarkdown>
+                </div>
+              </div>
+            </div>
           )
-        )}
+        ))}
 
         {messages.length > 0 && (
           <div className="aui-thread-viewport-spacer min-h-8 grow" />
@@ -558,8 +548,6 @@ export function ChatInterface({ conversationId, onConversationCreated }: ChatInt
                         src={img} 
                         alt={`Aperçu ${idx + 1}`}
                         className="max-w-full h-auto"
-                        loading="lazy"
-                        decoding="async"
                       />
                       <button
                         type="button"

@@ -166,17 +166,7 @@ export async function GET(
       };
     })
 
-    // Add aggressive caching headers for better performance
-    return NextResponse.json(
-      { messages },
-      {
-        headers: {
-          'Cache-Control': 'private, max-age=300, stale-while-revalidate=600',
-          'X-Content-Type-Options': 'nosniff',
-          'X-Frame-Options': 'DENY',
-        },
-      }
-    )
+    return NextResponse.json({ messages })
   } catch (error: any) {
     if (error.message === 'Unauthorized') {
       return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
