@@ -8,16 +8,24 @@ import { ClipboardPolyfillProvider } from "@/components/clipboard-polyfill-provi
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
+  display: "swap", // Faster font loading
+  preload: true,
 });
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
+  display: "swap", // Faster font loading
+  preload: true,
 });
 
 export const metadata: Metadata = {
   title: "Hasie AI",
   description: "Application d'assistant IA développée par Hasie Group",
+  // Performance optimizations
+  other: {
+    "x-dns-prefetch-control": "on",
+  },
 };
 
 export default function RootLayout({
@@ -28,6 +36,10 @@ export default function RootLayout({
   return (
     <html lang="fr">
       <head>
+        {/* Resource hints for faster loading */}
+        <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.googleapis.com" crossOrigin="anonymous" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <script
           dangerouslySetInnerHTML={{
             __html: `
