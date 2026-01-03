@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useMemo, useCallback, Component, ErrorInfo, ReactNode, memo } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback, Component, ErrorInfo, ReactNode, memo, startTransition } from "react";
 import { Thread } from "@/components/assistant-ui/thread";
 import {
   AssistantChatTransport,
@@ -171,81 +171,64 @@ function AssistantContent() {
     }
   }, [currentConversationId])
 
-  // Optimized message transformation function
+  // Ultra-optimized message transformation function
+  // API already returns messages in correct format, so we just need minimal conversion
   const transformMessage = useCallback((msg: any): any | null => {
-    // Fast validation
-    if (!msg?.role || msg?.content === undefined) return null;
+    // Fast validation - early exit
+    if (!msg?.role || !msg?.content) return null;
     
-    // Handle content - might be string, array, or need parsing
-    let contentArray: any[] | null = null;
-    
+    // API already returns content as array format, so we can optimize
+    // Fast path: content is already an array (most common case)
     if (Array.isArray(msg.content)) {
-      contentArray = msg.content;
-    } else if (typeof msg.content === 'string') {
-      const trimmed = msg.content.trim();
-      // Quick check before parsing JSON
-      if (trimmed.startsWith('[') || trimmed.startsWith('{')) {
-        try {
-          const parsed = JSON.parse(trimmed);
-          if (Array.isArray(parsed)) {
-            contentArray = parsed;
-          }
-        } catch {
-          // Not JSON, treat as plain text
-          contentArray = null;
-        }
-      }
-    }
-    
-    // Handle both text and multimodal content (text + images)
-    if (contentArray && Array.isArray(contentArray)) {
+      // Filter and map in one pass for better performance
       const parts: any[] = [];
+      let hasText = false;
       
-      for (const part of contentArray) {
-        // Handle text parts
-        if (part?.type === 'text' && part.text !== undefined) {
+      for (let i = 0; i < msg.content.length; i++) {
+        const part = msg.content[i];
+        if (!part) continue;
+        
+        // Text parts - most common
+        if (part.type === 'text' && part.text) {
           const text = String(part.text).trim();
           if (text) {
             parts.push({ type: 'text' as const, text });
+            hasText = true;
           }
-        } 
-        // Handle image_url format
-        else if (part?.type === 'image_url' && part.image_url?.url) {
-          const imageUrl = part.image_url.url;
-          const mediaType = imageUrl.startsWith('data:') 
-            ? imageUrl.substring(5, imageUrl.indexOf(';')) 
-            : 'image/png';
-          parts.push({ type: 'file' as const, url: imageUrl, mediaType });
         }
-        // Handle image format
-        else if (part?.type === 'image' && (part.image || part.url)) {
-          const imageUrl = part.image || part.url;
-          const mediaType = imageUrl.startsWith('data:') 
-            ? imageUrl.substring(5, imageUrl.indexOf(';')) 
-            : 'image/png';
-          parts.push({ type: 'file' as const, url: imageUrl, mediaType });
+        // Image parts - less common, optimize
+        else if (part.type === 'image_url' && part.image_url?.url) {
+          parts.push({ 
+            type: 'file' as const, 
+            url: part.image_url.url, 
+            mediaType: part.image_url.url.startsWith('data:') 
+              ? part.image_url.url.substring(5, part.image_url.url.indexOf(';')) || 'image/png'
+              : 'image/png'
+          });
         }
-        // Handle file format (already correct)
-        else if (part?.type === 'file' && part.url) {
+        // File parts - already correct
+        else if (part.type === 'file' && part.url) {
           parts.push(part);
         }
       }
       
-      if (parts.length === 0) return null;
+      // Must have at least text content
+      if (!hasText || parts.length === 0) return null;
       
       return {
-        id: msg.id || `msg-${Date.now()}-${Math.random()}`,
+        id: msg.id,
         role: msg.role as 'user' | 'assistant',
         parts,
       };
-    } 
-    // Handle plain string content
-    else if (typeof msg.content === 'string') {
+    }
+    
+    // Fallback: string content (should be rare since API converts it)
+    if (typeof msg.content === 'string') {
       const content = msg.content.trim();
       if (!content) return null;
       
       return {
-        id: msg.id || `msg-${Date.now()}-${Math.random()}`,
+        id: msg.id,
         role: msg.role as 'user' | 'assistant',
         parts: [{ type: 'text' as const, text: content }],
       };
@@ -271,66 +254,34 @@ function AssistantContent() {
       setMessagesLoadedIntoRuntime(false);
       
       try {
-        const response = await fetch(`/api/conversations/${currentConversationId}/messages`);
+        const response = await fetch(`/api/conversations/${currentConversationId}/messages`, {
+          cache: 'no-store', // Always get fresh data
+        });
+        
         if (response.ok) {
           const data = await response.json();
           const messages = data.messages || [];
           
-          // Debug: Log loaded messages
-          if (process.env.NODE_ENV === 'development') {
-            console.log('📥 Loaded messages from API:', messages.length, messages);
+          // Ultra-fast processing: transform all messages synchronously
+          // Modern JS engines handle this efficiently, batch processing adds overhead
+          const formattedMessages: any[] = new Array(messages.length);
+          let validCount = 0;
+          
+          // Single pass transformation - fastest approach
+          for (let i = 0; i < messages.length; i++) {
+            const transformed = transformMessage(messages[i]);
+            if (transformed) {
+              formattedMessages[validCount++] = transformed;
+            }
           }
           
-          // Process messages efficiently - optimized batch processing to avoid blocking UI
-          const formattedMessages: any[] = [];
-          const messageCount = messages.length;
+          // Resize array to actual size
+          formattedMessages.length = validCount;
           
-          // For large conversations, process in batches to avoid blocking
-          if (messageCount > 50) {
-            const BATCH_SIZE = 50;
-            let processedCount = 0;
-            
-            const processBatch = () => {
-              const endIndex = Math.min(processedCount + BATCH_SIZE, messageCount);
-              for (let i = processedCount; i < endIndex; i++) {
-                const transformed = transformMessage(messages[i]);
-                if (transformed) {
-                  formattedMessages.push(transformed);
-                }
-              }
-              processedCount = endIndex;
-              
-              if (processedCount < messageCount) {
-                // Use requestIdleCallback or setTimeout to yield to browser
-                if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
-                  requestIdleCallback(processBatch, { timeout: 100 });
-                } else {
-                  setTimeout(processBatch, 0);
-                }
-              } else {
-                setInitialMessages(formattedMessages);
-              }
-            };
-            
-            processBatch();
-          } else {
-            // Small conversations: process all at once for speed
-            for (const msg of messages) {
-              const transformed = transformMessage(msg);
-              if (transformed) {
-                formattedMessages.push(transformed);
-              } else if (process.env.NODE_ENV === 'development') {
-                console.warn('⚠️ Message filtered out:', msg);
-              }
-            }
-            
-            // Debug: Log transformed messages
-            if (process.env.NODE_ENV === 'development') {
-              console.log('✅ Transformed messages:', formattedMessages.length, formattedMessages);
-            }
-            
+          // Use startTransition for non-urgent state update to keep UI responsive
+          startTransition(() => {
             setInitialMessages(formattedMessages);
-          }
+          });
         } else if (response.status === 404) {
           if (typeof window !== 'undefined') {
             localStorage.removeItem('currentConversationId');
@@ -508,6 +459,14 @@ function AssistantContent() {
   const lastSetMessagesLengthRef = useRef<number>(0);
   const lastSetMessagesIdsRef = useRef<string>('');
 
+  // Memoize valid messages to avoid recalculation
+  const validMessages = useMemo(() => {
+    if (initialMessages.length === 0) return [];
+    return initialMessages.filter((msg: any) => 
+      msg?.id && msg?.role && msg?.parts?.length > 0
+    );
+  }, [initialMessages]);
+
   // SOLUTION: With useChat + initialMessages, we need to update messages when initialMessages changes
   // useChat's initialMessages only works on mount, so we use chat.setMessages() when they change
   useEffect(() => {
@@ -516,9 +475,11 @@ function AssistantContent() {
       return;
     }
     
-    // Create a stable identifier for the messages to compare
-    const messagesIds = initialMessages.map(m => m.id || '').join(',');
-    const messagesLength = initialMessages.length;
+    // Create a stable identifier for the messages to compare (optimized)
+    const messagesIds = validMessages.length > 0 
+      ? validMessages.map((m: any) => m.id || '').join(',')
+      : '';
+    const messagesLength = validMessages.length;
     
     // Check if we've already set these exact messages to avoid infinite loops
     const messagesChanged = 
@@ -533,36 +494,16 @@ function AssistantContent() {
     
     // Update chat messages when initialMessages changes
     // useAISDKRuntime expects assistant-ui format with 'parts' property
-    // The transformMessage function already converts messages to this format
+    // Use memoized validMessages for better performance
     if (currentConversationId) {
-      if (initialMessages.length > 0) {
-        // Messages are already in assistant-ui format (with parts) from transformMessage
-        // Filter out any null/undefined messages and ensure they have the correct structure
-        const validMessages = initialMessages.filter((msg: any) => {
-          // Must have id, role, and at least one part with content
-          return msg && msg.id && msg.role && msg.parts && Array.isArray(msg.parts) && msg.parts.length > 0;
-        });
-        
-        // Debug: Log messages being set
-        if (process.env.NODE_ENV === 'development') {
-          console.log('💬 Setting messages to chat:', validMessages.length, validMessages);
-        }
-        
-        if (validMessages.length > 0) {
+      if (validMessages.length > 0) {
+        // Use startTransition for smoother UI updates
+        startTransition(() => {
           chat.setMessages(validMessages as any);
-          lastSetMessagesIdsRef.current = messagesIds;
-          lastSetMessagesLengthRef.current = messagesLength;
-        } else {
-          // No valid messages, clear
-          if (process.env.NODE_ENV === 'development') {
-            console.warn('⚠️ No valid messages to set, all were filtered out');
-          }
-          chat.setMessages([]);
-          lastSetMessagesIdsRef.current = '';
-          lastSetMessagesLengthRef.current = 0;
-        }
+        });
+        lastSetMessagesIdsRef.current = messagesIds;
+        lastSetMessagesLengthRef.current = messagesLength;
       } else {
-        // No messages for this conversation
         chat.setMessages([]);
         lastSetMessagesIdsRef.current = '';
         lastSetMessagesLengthRef.current = 0;
@@ -579,7 +520,7 @@ function AssistantContent() {
     // Mark messages as loaded so UI can render
     setMessagesLoadedIntoRuntime(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentConversationId, initialMessages, isLoadingHistory]); // chat.setMessages is stable, so we don't need chat in deps
+  }, [currentConversationId, validMessages, isLoadingHistory]); // Use memoized validMessages instead of initialMessages
 
   // Monitor for new conversation creation when in "new chat" mode
   // OPTIMIZED: Use exponential backoff to reduce server load
