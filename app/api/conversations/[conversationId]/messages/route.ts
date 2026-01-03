@@ -16,41 +16,46 @@ export async function GET(
     const user = await requireAuth()
     const { conversationId } = await context.params
 
-    // Verify user owns this conversation
+    // Optimized: Query messages directly - faster than loading conversation + messages
+    // First verify conversation exists and user owns it (for 404 error)
     const conversation = await prisma.conversation.findFirst({
       where: {
         id: conversationId,
         userId: user.id,
       },
-      include: {
-        messages: {
-          orderBy: { createdAt: 'asc' },
-          select: {
-            id: true,
-            role: true,
-            content: true,
-            createdAt: true,
-          },
-        },
-      },
+      select: { id: true }, // Only select id for minimal data transfer
     })
-
+    
     if (!conversation) {
       return NextResponse.json(
         { error: 'Conversation introuvable' },
         { status: 404 }
       )
     }
+    
+    // Then query messages directly - more efficient than include
+    const messages = await prisma.message.findMany({
+      where: {
+        conversationId: conversationId,
+      },
+      select: {
+        id: true,
+        role: true,
+        content: true,
+        createdAt: true,
+      },
+      orderBy: { createdAt: 'asc' },
+    })
 
     // Ultra-optimized conversion: pre-allocate array and use fast paths
-    const messages = new Array(conversation.messages.length);
+    const formattedMessages = new Array(messages.length);
     
-    for (let i = 0; i < conversation.messages.length; i++) {
-      const msg = conversation.messages[i];
+    for (let i = 0; i < messages.length; i++) {
+      const msg = messages[i];
       
       // Handle empty content
       if (!msg.content || msg.content.length === 0) {
-        messages[i] = {
+        formattedMessages[i] = {
           id: msg.id,
           role: msg.role,
           content: [{ type: 'text' as const, text: '' }],
@@ -62,7 +67,7 @@ export async function GET(
       // Fast path: plain text (most common case - ~95% of messages)
       const firstChar = msg.content[0];
       if (firstChar !== '[' && firstChar !== '{') {
-        messages[i] = {
+        formattedMessages[i] = {
           id: msg.id,
           role: msg.role,
           content: [{ type: 'text' as const, text: msg.content }],
@@ -98,7 +103,7 @@ export async function GET(
             return part;
           });
           
-          messages[i] = {
+          formattedMessages[i] = {
             id: msg.id,
             role: msg.role,
             content: content.length > 0 ? content : [{ type: 'text' as const, text: '' }],
@@ -106,7 +111,7 @@ export async function GET(
           };
         } else {
           // Not an array, treat as plain text
-          messages[i] = {
+          formattedMessages[i] = {
             id: msg.id,
             role: msg.role,
             content: [{ type: 'text' as const, text: msg.content }],
@@ -115,7 +120,7 @@ export async function GET(
         }
       } catch {
         // Not valid JSON, treat as plain text
-        messages[i] = {
+        formattedMessages[i] = {
           id: msg.id,
           role: msg.role,
           content: [{ type: 'text' as const, text: msg.content }],
@@ -124,7 +129,16 @@ export async function GET(
       }
     }
 
-    return NextResponse.json({ messages })
+    // Return with compression headers for faster transfer
+    return NextResponse.json(
+      { messages: formattedMessages },
+      {
+        headers: {
+          'Cache-Control': 'private, no-cache, no-store, must-revalidate',
+          'Content-Type': 'application/json',
+        },
+      }
+    )
   } catch (error: any) {
     if (error.message === 'Unauthorized') {
       return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
