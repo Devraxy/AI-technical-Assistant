@@ -254,9 +254,19 @@ function AssistantContent() {
       setMessagesLoadedIntoRuntime(false);
       
       try {
+        // Use AbortController for request cancellation if component unmounts
+        const abortController = new AbortController();
+        const timeoutId = setTimeout(() => abortController.abort(), 10000); // 10s timeout
+        
         const response = await fetch(`/api/conversations/${currentConversationId}/messages`, {
           cache: 'no-store', // Always get fresh data
+          signal: abortController.signal,
+          headers: {
+            'Accept': 'application/json',
+          },
         });
+        
+        clearTimeout(timeoutId);
         
         if (response.ok) {
           const data = await response.json();
