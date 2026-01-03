@@ -138,7 +138,7 @@ export function ChatInterface({ conversationId, onConversationCreated }: ChatInt
         // Use startTransition for non-urgent UI updates
         const transformedMessages = (data.messages || [])
           .map(transformMessage)
-          .filter((msg): msg is Message => msg !== null)
+          .filter((msg: Message | null): msg is Message => msg !== null)
         
         startTransition(() => {
           setMessages(transformedMessages)
