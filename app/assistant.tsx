@@ -276,16 +276,48 @@ function AssistantContent() {
           const data = await response.json();
           const messages = data.messages || [];
           
-          // Process messages efficiently - optimized synchronous processing
-          // The transformMessage function is already optimized, so we can process all at once
+          // Process messages efficiently - optimized batch processing to avoid blocking UI
           const formattedMessages: any[] = [];
-          for (const msg of messages) {
-            const transformed = transformMessage(msg);
-            if (transformed) {
-              formattedMessages.push(transformed);
+          const messageCount = messages.length;
+          
+          // For large conversations, process in batches to avoid blocking
+          if (messageCount > 50) {
+            const BATCH_SIZE = 50;
+            let processedCount = 0;
+            
+            const processBatch = () => {
+              const endIndex = Math.min(processedCount + BATCH_SIZE, messageCount);
+              for (let i = processedCount; i < endIndex; i++) {
+                const transformed = transformMessage(messages[i]);
+                if (transformed) {
+                  formattedMessages.push(transformed);
+                }
+              }
+              processedCount = endIndex;
+              
+              if (processedCount < messageCount) {
+                // Use requestIdleCallback or setTimeout to yield to browser
+                if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+                  requestIdleCallback(processBatch, { timeout: 100 });
+                } else {
+                  setTimeout(processBatch, 0);
+                }
+              } else {
+                setInitialMessages(formattedMessages);
+              }
+            };
+            
+            processBatch();
+          } else {
+            // Small conversations: process all at once for speed
+            for (const msg of messages) {
+              const transformed = transformMessage(msg);
+              if (transformed) {
+                formattedMessages.push(transformed);
+              }
             }
+            setInitialMessages(formattedMessages);
           }
-          setInitialMessages(formattedMessages);
         } else if (response.status === 404) {
           if (typeof window !== 'undefined') {
             localStorage.removeItem('currentConversationId');
@@ -515,27 +547,31 @@ function AssistantContent() {
   }, [currentConversationId, initialMessages, isLoadingHistory]); // chat.setMessages is stable, so we don't need chat in deps
 
   // Monitor for new conversation creation when in "new chat" mode
+  // OPTIMIZED: Use exponential backoff to reduce server load
   useEffect(() => {
     if (currentConversationId !== null) {
       return;
     }
 
     let checkCount = 0;
-    const maxChecks = 15;
-    let intervalId: NodeJS.Timeout | null = null;
+    const maxChecks = 10; // Reduced from 15
+    let timeoutId: NodeJS.Timeout | null = null;
+    let isActive = true;
 
     const checkForNewConversation = async () => {
+      if (!isActive) return;
+      
       checkCount++;
 
       if (checkCount > maxChecks) {
-        if (intervalId) {
-          clearInterval(intervalId);
-        }
         return;
       }
 
       try {
-        const response = await fetch('/api/conversations');
+        const response = await fetch('/api/conversations', {
+          // Add cache control to prevent unnecessary requests
+          cache: 'no-store',
+        });
         if (response.ok) {
           const data = await response.json();
           if (data.conversations && data.conversations.length > 0) {
@@ -544,9 +580,7 @@ function AssistantContent() {
             if (conversationAge < 20000) {
               setCurrentConversationId(latestConversation.id);
               setConversationListKey(prev => prev + 1);
-              if (intervalId) {
-                clearInterval(intervalId);
-              }
+              isActive = false;
               return;
             }
           }
@@ -554,14 +588,23 @@ function AssistantContent() {
       } catch (error) {
         // Silent error handling
       }
+
+      // Exponential backoff: start with 1s, then 2s, 3s, 5s, 8s, etc.
+      const delays = [1000, 2000, 3000, 5000, 8000, 10000, 10000, 10000, 10000, 10000];
+      const delay = delays[Math.min(checkCount - 1, delays.length - 1)];
+      
+      if (isActive && checkCount < maxChecks) {
+        timeoutId = setTimeout(checkForNewConversation, delay);
+      }
     };
 
-    checkForNewConversation();
-    intervalId = setInterval(checkForNewConversation, 2000);
+    // Initial check after a short delay
+    timeoutId = setTimeout(checkForNewConversation, 500);
 
     return () => {
-      if (intervalId) {
-        clearInterval(intervalId);
+      isActive = false;
+      if (timeoutId) {
+        clearTimeout(timeoutId);
       }
     };
   }, [currentConversationId]);
