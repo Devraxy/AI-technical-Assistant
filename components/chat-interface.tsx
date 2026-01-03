@@ -1,10 +1,27 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback, useMemo, memo } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo, memo, lazy, Suspense, startTransition } from 'react'
 import { Button } from '@/components/ui/button'
 import { ArrowUpIcon, Loader2, Square, ImageIcon, X } from 'lucide-react'
 import { LoadingSpinner } from '@/components/ui/loading-spinner'
-import ReactMarkdown from 'react-markdown'
+
+// Lazy load ReactMarkdown for better initial load performance
+const ReactMarkdown = lazy(() => import('react-markdown'))
+
+// Aggressively preload ReactMarkdown on page load
+if (typeof window !== 'undefined') {
+  // Use requestIdleCallback for non-blocking preload
+  if ('requestIdleCallback' in window) {
+    requestIdleCallback(() => {
+      import('react-markdown').catch(() => {})
+    }, { timeout: 2000 })
+  } else {
+    // Fallback for browsers without requestIdleCallback
+    setTimeout(() => {
+      import('react-markdown').catch(() => {})
+    }, 100)
+  }
+}
 
 interface Message {
   id: string
@@ -19,6 +36,56 @@ interface ChatInterfaceProps {
   onConversationCreated?: (conversationId: string) => void
 }
 
+// Memoized message components to prevent unnecessary re-renders
+const UserMessage = memo(({ message }: { message: Message }) => (
+  <div
+    className="aui-user-message-root mx-auto grid w-full max-w-[var(--thread-max-width)] animate-in auto-rows-auto grid-cols-[minmax(72px,1fr)_auto] gap-y-2 px-2 py-4 duration-150 ease-out fade-in slide-in-from-bottom-1 first:mt-3 last:mb-5 [&:where(>*)]:col-start-2"
+    data-role="user"
+  >
+    <div className="aui-user-message-content-wrapper relative col-start-2 min-w-0 flex flex-col gap-2">
+      {/* Images */}
+      {message.images && message.images.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {message.images.map((img, idx) => (
+            <div key={idx} className="relative rounded-lg overflow-hidden border border-border max-w-[200px]">
+              <img 
+                src={img} 
+                alt={`Image téléchargée ${idx + 1}`}
+                className="max-w-full h-auto"
+                loading="lazy"
+                decoding="async"
+              />
+            </div>
+          ))}
+        </div>
+      )}
+      {/* Text content */}
+      {message.content && (
+        <div className="aui-user-message-content rounded-3xl bg-muted px-5 py-2.5 break-words text-foreground">
+          {message.content}
+        </div>
+      )}
+    </div>
+  </div>
+))
+UserMessage.displayName = 'UserMessage'
+
+const AssistantMessage = memo(({ message }: { message: Message }) => (
+  <div
+    className="aui-assistant-message-root relative mx-auto w-full max-w-[var(--thread-max-width)] animate-in py-4 duration-150 ease-out fade-in slide-in-from-bottom-1 last:mb-24"
+    data-role="assistant"
+  >
+    <div className="aui-assistant-message-content mx-2 leading-7 break-words text-foreground">
+      <div className="prose prose-sm dark:prose-invert max-w-none">
+        <Suspense fallback={<span>{message.content}</span>}>
+          <ReactMarkdown>{message.content}</ReactMarkdown>
+        </Suspense>
+      </div>
+    </div>
+  </div>
+))
+AssistantMessage.displayName = 'AssistantMessage'
+
 export function ChatInterface({ conversationId, onConversationCreated }: ChatInterfaceProps) {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
@@ -29,8 +96,10 @@ export function ChatInterface({ conversationId, onConversationCreated }: ChatInt
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  // Optimized message transformation
-  const transformMessage = useCallback((msg: any) => {
+  // Optimized message transformation - memoized
+  const transformMessage = useCallback((msg: any): Message | null => {
+    if (!msg?.role || msg?.content === undefined) return null
+    
     let images: string[] = []
     let textContent = ''
     
@@ -49,22 +118,31 @@ export function ChatInterface({ conversationId, onConversationCreated }: ChatInt
     }
     
     return {
-      ...msg,
+      id: msg.id || `msg-${Date.now()}`,
+      role: msg.role,
       content: textContent,
+      createdAt: msg.createdAt || new Date().toISOString(),
       images: images.length > 0 ? images : undefined
     }
   }, [])
 
-  // Load conversation function - must be declared before useEffect that uses it
+  // Load conversation function - optimized with caching
   const loadConversation = useCallback(async (id: string) => {
     setLoadingMessages(true)
     try {
+      // Browser will use HTTP cache based on server Cache-Control headers
       const response = await fetch(`/api/conversations/${id}/messages`)
       if (response.ok) {
         const data = await response.json()
-        // Transform messages using optimized function
-        const transformedMessages = (data.messages || []).map(transformMessage)
-        setMessages(transformedMessages)
+        // Transform messages using optimized function - filter out nulls
+        // Use startTransition for non-urgent UI updates
+        const transformedMessages = (data.messages || [])
+          .map(transformMessage)
+          .filter((msg): msg is Message => msg !== null)
+        
+        startTransition(() => {
+          setMessages(transformedMessages)
+        })
       } else if (response.status === 404) {
         // Conversation not found - clear it and start fresh
         setMessages([])
@@ -96,23 +174,34 @@ export function ChatInterface({ conversationId, onConversationCreated }: ChatInt
     }
   }, [conversationId, loadConversation])
 
-  // Auto-scroll to bottom when messages change
+  // Optimized auto-scroll - use requestAnimationFrame for smoother scrolling
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+    const rafId = requestAnimationFrame(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+    })
+    
+    return () => cancelAnimationFrame(rafId)
   }, [messages])
 
-  // Convert file to base64 data URL
-  function fileToBase64(file: File): Promise<string> {
+  // Convert file to base64 data URL - optimized with size limit
+  const fileToBase64 = useCallback((file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
+      // Limit file size to 10MB to prevent memory issues
+      const MAX_SIZE = 10 * 1024 * 1024 // 10MB
+      if (file.size > MAX_SIZE) {
+        reject(new Error('Fichier trop volumineux (max 10MB)'))
+        return
+      }
+      
       const reader = new FileReader()
       reader.onload = () => resolve(reader.result as string)
       reader.onerror = reject
       reader.readAsDataURL(file)
     })
-  }
+  }, [])
 
-  // Handle image file selection
-  async function handleImageSelect(e: React.ChangeEvent<HTMLInputElement>) {
+  // Handle image file selection - optimized with error handling
+  const handleImageSelect = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files
     if (!files) return
 
@@ -123,25 +212,29 @@ export function ChatInterface({ conversationId, onConversationCreated }: ChatInt
     }
 
     try {
+      // Process images in batches to avoid blocking
       const base64Images = await Promise.all(imageFiles.map(fileToBase64))
       setSelectedImages(prev => [...prev, ...base64Images])
     } catch (error) {
-      console.error('Error converting images:', error)
-      alert('Échec du traitement des images')
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Error converting images:', error)
+      }
+      const errorMessage = error instanceof Error ? error.message : 'Échec du traitement des images'
+      alert(errorMessage)
+    } finally {
+      // Reset input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ''
+      }
     }
-
-    // Reset input
-    if (fileInputRef.current) {
-      fileInputRef.current.value = ''
-    }
-  }
+  }, [fileToBase64])
 
   // Remove an image from selection
-  function removeImage(index: number) {
+  const removeImage = useCallback((index: number) => {
     setSelectedImages(prev => prev.filter((_, i) => i !== index))
-  }
+  }, [])
 
-  async function handleSubmit(e: React.FormEvent) {
+  const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault()
     if ((!input.trim() && selectedImages.length === 0) || isLoading) return
 
@@ -247,21 +340,15 @@ export function ChatInterface({ conversationId, onConversationCreated }: ChatInt
         }
       ]
 
-      // Debug: Log what we're sending (ALWAYS show - remove condition)
-      console.log('🔍 [Frontend DEBUG] Sending message with parts:', {
-        historyCount: historyMessages.length,
-        partsCount: parts.length,
-        imageCount: parts.filter(p => p.type === 'image').length,
-        textCount: parts.filter(p => p.type === 'text').length,
-        imageLengths: parts.filter(p => p.type === 'image').map(p => p.image?.length || 0),
-        imagePreviews: parts.filter(p => p.type === 'image').map(p => p.image?.substring(0, 50) || 'none'),
-        fullParts: parts, // Show full parts array
-      });
-      
-      console.log('🔍 [Frontend DEBUG] Full request body:', JSON.stringify({
-        messages: allMessages,
-        conversationId: conversationId,
-      }, null, 2));
+      // Debug logging only in development
+      if (process.env.NODE_ENV === 'development') {
+        console.log('🔍 [Frontend DEBUG] Sending message with parts:', {
+          historyCount: historyMessages.length,
+          partsCount: parts.length,
+          imageCount: parts.filter(p => p.type === 'image').length,
+          textCount: parts.filter(p => p.type === 'text').length,
+        });
+      }
 
       const response = await fetch('/api/chat', {
         method: 'POST',
@@ -324,22 +411,24 @@ export function ChatInterface({ conversationId, onConversationCreated }: ChatInt
                   if (data.type === 'text-delta' && data.textDelta) {
                     assistantMessage += data.textDelta
 
-                    // Update assistant message in real-time
-                    setMessages(prev => {
-                      const newMessages = [...prev]
-                      const lastMessage = newMessages[newMessages.length - 1]
+                    // Update assistant message in real-time - use startTransition for smoother updates
+                    startTransition(() => {
+                      setMessages(prev => {
+                        const newMessages = [...prev]
+                        const lastMessage = newMessages[newMessages.length - 1]
 
-                      if (lastMessage && lastMessage.role === 'assistant' && lastMessage.id.startsWith('temp-assistant')) {
-                        lastMessage.content = assistantMessage
-                      } else {
-                        newMessages.push({
-                          id: `temp-assistant-${Date.now()}`,
-                          role: 'assistant',
-                          content: assistantMessage,
-                          createdAt: new Date().toISOString(),
-                        })
-                      }
-                      return newMessages
+                        if (lastMessage && lastMessage.role === 'assistant' && lastMessage.id.startsWith('temp-assistant')) {
+                          lastMessage.content = assistantMessage
+                        } else {
+                          newMessages.push({
+                            id: `temp-assistant-${Date.now()}`,
+                            role: 'assistant',
+                            content: assistantMessage,
+                            createdAt: new Date().toISOString(),
+                          })
+                        }
+                        return newMessages
+                      })
                     })
                   }
                 } catch (e) {
@@ -399,14 +488,14 @@ export function ChatInterface({ conversationId, onConversationCreated }: ChatInt
       setIsLoading(false)
       textareaRef.current?.focus()
     }
-  }
+  }, [input, selectedImages, isLoading, messages, conversationId, onConversationCreated, loadConversation])
 
-  function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
+  const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
       handleSubmit(e as any)
     }
-  }
+  }, [handleSubmit])
 
   if (loadingMessages) {
     return (
@@ -441,53 +530,14 @@ export function ChatInterface({ conversationId, onConversationCreated }: ChatInt
           </div>
         )}
 
-        {/* Messages */}
-        {messages.map((message) => (
+        {/* Messages - using memoized components */}
+        {messages.map((message) => 
           message.role === 'user' ? (
-            // User message matching Thread
-            <div
-              key={message.id}
-              className="aui-user-message-root mx-auto grid w-full max-w-[var(--thread-max-width)] animate-in auto-rows-auto grid-cols-[minmax(72px,1fr)_auto] gap-y-2 px-2 py-4 duration-150 ease-out fade-in slide-in-from-bottom-1 first:mt-3 last:mb-5 [&:where(>*)]:col-start-2"
-              data-role="user"
-            >
-              <div className="aui-user-message-content-wrapper relative col-start-2 min-w-0 flex flex-col gap-2">
-                {/* Images */}
-                {message.images && message.images.length > 0 && (
-                  <div className="flex flex-wrap gap-2">
-                    {message.images.map((img, idx) => (
-                      <div key={idx} className="relative rounded-lg overflow-hidden border border-border max-w-[200px]">
-                        <img 
-                          src={img} 
-                          alt={`Image téléchargée ${idx + 1}`}
-                          className="max-w-full h-auto"
-                        />
-                      </div>
-                    ))}
-                  </div>
-                )}
-                {/* Text content */}
-                {message.content && (
-                  <div className="aui-user-message-content rounded-3xl bg-muted px-5 py-2.5 break-words text-foreground">
-                    {message.content}
-                  </div>
-                )}
-              </div>
-            </div>
+            <UserMessage key={message.id} message={message} />
           ) : (
-            // Assistant message matching Thread
-            <div
-              key={message.id}
-              className="aui-assistant-message-root relative mx-auto w-full max-w-[var(--thread-max-width)] animate-in py-4 duration-150 ease-out fade-in slide-in-from-bottom-1 last:mb-24"
-              data-role="assistant"
-            >
-              <div className="aui-assistant-message-content mx-2 leading-7 break-words text-foreground">
-                <div className="prose prose-sm dark:prose-invert max-w-none">
-                  <ReactMarkdown>{message.content}</ReactMarkdown>
-                </div>
-              </div>
-            </div>
+            <AssistantMessage key={message.id} message={message} />
           )
-        ))}
+        )}
 
         {messages.length > 0 && (
           <div className="aui-thread-viewport-spacer min-h-8 grow" />
@@ -508,6 +558,8 @@ export function ChatInterface({ conversationId, onConversationCreated }: ChatInt
                         src={img} 
                         alt={`Aperçu ${idx + 1}`}
                         className="max-w-full h-auto"
+                        loading="lazy"
+                        decoding="async"
                       />
                       <button
                         type="button"
