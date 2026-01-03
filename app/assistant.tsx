@@ -276,6 +276,11 @@ function AssistantContent() {
           const data = await response.json();
           const messages = data.messages || [];
           
+          // Debug: Log loaded messages
+          if (process.env.NODE_ENV === 'development') {
+            console.log('📥 Loaded messages from API:', messages.length, messages);
+          }
+          
           // Process messages efficiently - optimized batch processing to avoid blocking UI
           const formattedMessages: any[] = [];
           const messageCount = messages.length;
@@ -314,8 +319,16 @@ function AssistantContent() {
               const transformed = transformMessage(msg);
               if (transformed) {
                 formattedMessages.push(transformed);
+              } else if (process.env.NODE_ENV === 'development') {
+                console.warn('⚠️ Message filtered out:', msg);
               }
             }
+            
+            // Debug: Log transformed messages
+            if (process.env.NODE_ENV === 'development') {
+              console.log('✅ Transformed messages:', formattedMessages.length, formattedMessages);
+            }
+            
             setInitialMessages(formattedMessages);
           }
         } else if (response.status === 404) {
@@ -519,13 +532,35 @@ function AssistantContent() {
     }
     
     // Update chat messages when initialMessages changes
-    // This bypasses the symbolInnerMessage issue because we're calling setMessages directly
-    // with AI SDK format messages
+    // useAISDKRuntime expects assistant-ui format with 'parts' property
+    // The transformMessage function already converts messages to this format
     if (currentConversationId) {
       if (initialMessages.length > 0) {
-        chat.setMessages(initialMessages);
-        lastSetMessagesIdsRef.current = messagesIds;
-        lastSetMessagesLengthRef.current = messagesLength;
+        // Messages are already in assistant-ui format (with parts) from transformMessage
+        // Filter out any null/undefined messages and ensure they have the correct structure
+        const validMessages = initialMessages.filter((msg: any) => {
+          // Must have id, role, and at least one part with content
+          return msg && msg.id && msg.role && msg.parts && Array.isArray(msg.parts) && msg.parts.length > 0;
+        });
+        
+        // Debug: Log messages being set
+        if (process.env.NODE_ENV === 'development') {
+          console.log('💬 Setting messages to chat:', validMessages.length, validMessages);
+        }
+        
+        if (validMessages.length > 0) {
+          chat.setMessages(validMessages as any);
+          lastSetMessagesIdsRef.current = messagesIds;
+          lastSetMessagesLengthRef.current = messagesLength;
+        } else {
+          // No valid messages, clear
+          if (process.env.NODE_ENV === 'development') {
+            console.warn('⚠️ No valid messages to set, all were filtered out');
+          }
+          chat.setMessages([]);
+          lastSetMessagesIdsRef.current = '';
+          lastSetMessagesLengthRef.current = 0;
+        }
       } else {
         // No messages for this conversation
         chat.setMessages([]);
