@@ -150,6 +150,7 @@ const AttachmentUI: FC = () => {
         throw new Error(`Type de pièce jointe inconnu : ${_exhaustiveCheck}`);
     }
   });
+  const attachmentName = useAssistantState(({ attachment }) => attachment.name);
 
   return (
     <Tooltip>
@@ -179,7 +180,9 @@ const AttachmentUI: FC = () => {
         {isComposer && <AttachmentRemove />}
       </AttachmentPrimitive.Root>
       <TooltipContent side="top">
-        <AttachmentPrimitive.Name />
+        {attachmentName && attachmentName !== 'file' && attachmentName !== 'File' 
+          ? attachmentName 
+          : typeLabel}
       </TooltipContent>
     </Tooltip>
   );
