@@ -389,27 +389,40 @@ function AssistantContent() {
               // If we found an attachment, convert and add it
               if (attachment && attachment.type === 'image' && attachment.file) {
                 const file = attachment.file;
-                const base64Data = await new Promise<string>((resolve, reject) => {
-                  const reader = new FileReader();
-                  reader.onload = () => resolve(reader.result as string);
-                  reader.onerror = reject;
-                  reader.readAsDataURL(file);
-                });
                 
-                // Add image part to message
-                if (!lastMessage.parts) {
-                  lastMessage.parts = [];
+                // Validate file size (OpenAI vision API limit is 20MB)
+                const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB in bytes
+                const fileSizeMB = file.size / (1024 * 1024);
+                
+                if (file.size > MAX_FILE_SIZE) {
+                  console.warn(`Image file too large: ${fileSizeMB.toFixed(2)}MB, max 20MB. File: ${file.name}`);
+                  // Show user-friendly error message
+                  alert(`Image trop volumineuse: ${fileSizeMB.toFixed(2)}MB\nLa taille maximale autorisée est de 20MB. Veuillez réduire la taille de l'image et réessayer.`);
+                  // Don't add the image if it's too large - continue without it
+                  // The API route will also validate, but this prevents unnecessary processing
+                } else {
+                  const base64Data = await new Promise<string>((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = () => resolve(reader.result as string);
+                    reader.onerror = reject;
+                    reader.readAsDataURL(file);
+                  });
+                  
+                  // Add image part to message
+                  if (!lastMessage.parts) {
+                    lastMessage.parts = [];
+                  }
+                  lastMessage.parts.push({
+                    type: 'file',
+                    url: base64Data,
+                    mediaType: file.type || 'image/png',
+                    filename: file.name || 'image.png',
+                  });
+                  imageParts = lastMessage.parts.filter((p: any) => p.type === 'file');
+                  
+                  // Update the request body
+                  options.body = JSON.stringify(bodyData);
                 }
-                lastMessage.parts.push({
-                  type: 'file',
-                  url: base64Data,
-                  mediaType: file.type || 'image/png',
-                  filename: file.name || 'image.png',
-                });
-                imageParts = lastMessage.parts.filter((p: any) => p.type === 'file');
-                
-                // Update the request body
-                options.body = JSON.stringify(bodyData);
               }
             } catch (e) {
               // Silently handle errors
