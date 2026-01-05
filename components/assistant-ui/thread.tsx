@@ -75,7 +75,7 @@ const ThreadScrollToBottom: FC = () => {
   return (
     <ThreadPrimitive.ScrollToBottom asChild>
       <TooltipIconButton
-        tooltip="Défiler vers le bas"
+        tooltip="Aller en bas"
         variant="outline"
         className="aui-thread-scroll-to-bottom absolute -top-12 z-10 self-center rounded-full p-4 disabled:invisible dark:bg-background dark:hover:bg-accent"
       >
@@ -94,18 +94,20 @@ const ThreadWelcome: FC = () => {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 10 }}
-            className="aui-thread-welcome-message-motion-1 text-2xl font-semibold"
+            className="aui-thread-welcome-message-motion-1 mb-2 text-2xl font-semibold"
           >
-            Bonjour !
+            Bonjour, je suis <span className="font-semibold">JOY</span>.
           </m.div>
           <m.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 10 }}
             transition={{ delay: 0.1 }}
-            className="aui-thread-welcome-message-motion-2 text-2xl text-muted-foreground/65"
+            className="aui-thread-welcome-message-motion-2 text-m text-muted-foreground/80"
           >
-            Comment puis-je vous aider aujourd'hui ?
+            Assistant technique en CVC, électricité, plomberie, GTB/GTC et multitechnique.
+            Dimensionnement, schémas et conformité aux normes (DTU / NF).
+            Merci d'indiquer votre besoin et le pays du projet.
           </m.div>
         </div>
       </div>
@@ -119,24 +121,28 @@ const ThreadSuggestions: FC = () => {
     <div className="aui-thread-welcome-suggestions grid w-full gap-2 pb-4 @md:grid-cols-2">
       {[
         {
-          title: "Quel est le temps",
-          label: "à Paris ?",
-          action: "Quel est le temps à Paris ?",
+          title: "Dimensionner une ventilation",
+          label: "bureaux, pertes de charge",
+          action:
+            "Je dois dimensionner une ventilation pour des bureaux (VMC/CTA). Donne une méthode terrain avec valeurs indicatives (débits, pertes de charge, choix ventilateur) + points de vigilance chantier.",
         },
         {
-          title: "Expliquer les hooks React",
-          label: "comme useState et useEffect",
-          action: "Expliquer les hooks React comme useState et useEffect",
+          title: "Schéma hydraulique CVC",
+          label: "PAC + ballon + réseaux",
+          action:
+            "Conçois un schéma hydraulique texte pour une PAC air/eau + ballon tampon + réseaux (plancher chauffant + CTA). Donne la logique, organes, réglages indicatifs et points de vigilance.",
         },
         {
-          title: "Écrire une requête SQL",
-          label: "pour trouver les meilleurs clients",
-          action: "Écrire une requête SQL pour trouver les meilleurs clients",
+          title: "Tableau BT + protections",
+          label: "sections, disjoncteurs",
+          action:
+            "Propose une architecture BT type (TGBT → TD) pour un local technique tertiaire. Donne exemples de sections, protections, sélectivité, et précise ce qui dépend du pays (réf. NFC 15-100 si FR).",
         },
         {
-          title: "Créer un plan de repas",
-          label: "pour une perte de poids saine",
-          action: "Créer un plan de repas pour une perte de poids saine",
+          title: "Analyser un extrait CCTP",
+          label: "risques + conformité",
+          action:
+            "Je vais coller un extrait de CCTP/DPGF. Résume en 2 lignes, liste les exigences, détecte incohérences/risques, puis propose une mise en conformité + optimisations techniques et économiques.",
         },
       ].map((suggestedAction, index) => (
         <m.div
@@ -174,6 +180,7 @@ const ThreadSuggestions: FC = () => {
 const Composer: FC = () => {
   return (
     <div className="aui-composer-wrapper sticky bottom-0 mx-auto flex w-full max-w-[var(--thread-max-width)] flex-col gap-4 overflow-visible rounded-t-3xl bg-background pb-4 md:pb-6">
+      <ThreadScrollToBottom />
       <ComposerPrimitive.Root className="aui-composer-root relative flex w-full flex-col">
         <ComposerPrimitive.AttachmentDropzone className="aui-composer-attachment-dropzone group/input-group flex w-full flex-col rounded-3xl border border-input bg-background px-1 pt-2 shadow-xs transition-[color,box-shadow] outline-none has-[textarea:focus-visible]:border-ring has-[textarea:focus-visible]:ring-[3px] has-[textarea:focus-visible]:ring-ring/50 data-[dragging=true]:border-dashed data-[dragging=true]:border-ring data-[dragging=true]:bg-accent/50 dark:bg-background">
           <ComposerAttachments />
@@ -182,7 +189,7 @@ const Composer: FC = () => {
             className="aui-composer-input mb-1 max-h-32 min-h-16 w-full resize-none bg-transparent px-3.5 pt-1.5 pb-3 text-base outline-none placeholder:text-muted-foreground focus-visible:ring-0"
             rows={1}
             autoFocus
-            aria-label="Saisie de message"
+            aria-label="Saisie du message"
           />
           <ComposerAction />
         </ComposerPrimitive.AttachmentDropzone>
@@ -286,7 +293,7 @@ const AssistantActionBar: FC = () => {
         </TooltipIconButton>
       </ActionBarPrimitive.Copy>
       <ActionBarPrimitive.Reload asChild>
-        <TooltipIconButton tooltip="Actualiser">
+        <TooltipIconButton tooltip="Rafraîchir">
           <RefreshCwIcon />
         </TooltipIconButton>
       </ActionBarPrimitive.Reload>
