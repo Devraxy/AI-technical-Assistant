@@ -12,6 +12,8 @@ interface User {
   name: string | null
   role: string
   status: 'active' | 'suspended' | 'disabled'
+  emailVerified: boolean
+  effectiveStatus?: 'active' | 'suspended' | 'disabled' | 'pending'
   createdAt: string
   updatedAt: string
 }
@@ -125,7 +127,8 @@ export default function AdminUsersPage() {
           <div className="flex items-center gap-4">
             <Button
               variant="outline"
-              size="sm"
+              size="default"
+              className="min-w-[160px]"
               onClick={() => router.push('/')}
             >
               <ArrowLeft className="h-4 w-4" />
@@ -162,15 +165,19 @@ export default function AdminUsersPage() {
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {users.map((user) => {
+                  // Compute effective status: only "active" if email is verified
+                  const effectiveStatus = user.emailVerified ? user.status : (user.status === 'active' ? 'pending' : user.status)
+                  
                   const statusConfig = {
                     active: { bg: 'bg-green-100', text: 'text-green-800', label: 'Actif' },
                     suspended: { bg: 'bg-yellow-100', text: 'text-yellow-800', label: 'Suspendu' },
                     disabled: { bg: 'bg-red-100', text: 'text-red-800', label: 'Désactivé' },
+                    pending: { bg: 'bg-orange-100', text: 'text-orange-800', label: 'En attente de vérification' },
                   }
-                  const config = statusConfig[user.status]
+                  const config = statusConfig[effectiveStatus as keyof typeof statusConfig] || statusConfig.pending
 
                   return (
-                    <tr key={user.id} className={user.status !== 'active' ? 'bg-gray-50' : ''}>
+                    <tr key={user.id} className={effectiveStatus !== 'active' ? 'bg-gray-50' : ''}>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm font-medium text-gray-900">
                           {user.name || 'Aucun nom'}
@@ -194,11 +201,13 @@ export default function AdminUsersPage() {
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span
-                          className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${config.bg} ${config.text}`}
-                        >
-                          {config.label}
-                        </span>
+                        <div className="flex-col gap-1">
+                          <span
+                            className={`px-3 py-1 inline-flex items-center justify-center text-xs leading-5 font-semibold rounded-full whitespace-nowrap ${config.bg} ${config.text}`}
+                          >
+                            {config.label}
+                          </span>
+                        </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {new Date(user.createdAt).toLocaleDateString()}
@@ -207,7 +216,7 @@ export default function AdminUsersPage() {
                         <div className="flex justify-end gap-2">
                           {currentUser?.id !== user.id && (
                             <>
-                              {user.status !== 'active' && (
+                              {effectiveStatus !== 'active' && user.emailVerified && (
                                 <Button
                                   variant="outline"
                                   size="sm"
