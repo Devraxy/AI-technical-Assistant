@@ -57,10 +57,16 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    // Verify the user's email
+    // Verify the user's email and set status to 'active' if not suspended/disabled
     await prisma.user.update({
       where: { id: verificationToken.userId },
-      data: { emailVerified: true },
+      data: { 
+        emailVerified: true,
+        // Set status to 'active' only if user is not suspended or disabled
+        ...(verificationToken.user.status !== 'suspended' && verificationToken.user.status !== 'disabled' 
+          ? { status: 'active' } 
+          : {}),
+      },
     })
 
     // Mark token as used
@@ -161,10 +167,16 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    // Verify the user's email
+    // Verify the user's email and set status to 'active' if not suspended/disabled
     await prisma.user.update({
       where: { id: user.id },
-      data: { emailVerified: true },
+      data: { 
+        emailVerified: true,
+        // Set status to 'active' only if user is not suspended or disabled
+        ...(user.status !== 'suspended' && user.status !== 'disabled' 
+          ? { status: 'active' } 
+          : {}),
+      },
     })
 
     // Mark token as used

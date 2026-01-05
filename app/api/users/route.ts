@@ -19,6 +19,7 @@ export async function GET() {
         name: true,
         role: true,
         status: true,
+        emailVerified: true,
         createdAt: true,
         updatedAt: true,
       },
@@ -27,7 +28,16 @@ export async function GET() {
       },
     })
 
-    return NextResponse.json({ users })
+    // Compute effective status: users should only be "active" if email is verified
+    const usersWithEffectiveStatus = users.map(user => ({
+      ...user,
+      // Effective status: only "active" if email is verified, otherwise use database status
+      // But if database status is "active" and email is not verified, show as "pending" conceptually
+      // We'll handle this in the frontend by checking emailVerified
+      effectiveStatus: user.emailVerified ? user.status : (user.status === 'active' ? 'pending' : user.status),
+    }))
+
+    return NextResponse.json({ users: usersWithEffectiveStatus })
   } catch (error: any) {
     if (error.message === 'Unauthorized') {
       return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
