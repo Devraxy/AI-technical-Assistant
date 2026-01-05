@@ -4,13 +4,34 @@ import { requireAuth } from '@/lib/session'
 import { prisma } from '@/lib/prisma'
 import { SYSTEM_PROMPT } from '@/lib/joy-stream'
 
+// Configure route to handle larger request bodies (for image uploads)
+// Next.js default is 1MB, we increase it to 50MB to handle base64-encoded images
+export const runtime = 'nodejs'
+export const maxDuration = 300 // 5 minutes for image processing
+
 export async function POST(req: Request) {
   try {
     // Verify user is authenticated
     const user = await requireAuth()
 
-    // Parse request body
-    const body = await req.json();
+    // Parse request body with error handling for large payloads
+    let body;
+    try {
+      body = await req.json();
+    } catch (parseError: any) {
+      // Handle 413 or body parsing errors
+      if (parseError.message?.includes('413') || parseError.message?.includes('too large') || parseError.message?.includes('PayloadTooLargeError')) {
+        return new Response(
+          JSON.stringify({ 
+            error: 'Requête trop volumineuse',
+            message: 'L\'image est trop grande. Veuillez réduire la taille de l\'image (maximum 20MB) et réessayer. Les images sont automatiquement encodées en base64, ce qui augmente leur taille d\'environ 33%.',
+          }),
+          { status: 413, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
+      throw parseError;
+    }
+    
     const { messages, conversationId }: { messages: any[]; conversationId?: string | null } = body;
     
 
@@ -400,6 +421,21 @@ export async function POST(req: Request) {
                 return null; // Remove suspiciously short image
               }
               
+              // Validate image size (OpenAI vision API limit is 20MB for original file)
+              // Base64 encoding: 4 characters = 3 bytes, so 20MB original ≈ 26.67MB base64
+              // We'll use 28MB base64 string length limit (≈ 21MB original) to be safe
+              const MAX_BASE64_LENGTH = 28 * 1024 * 1024; // 28MB in characters
+              const base64Length = cleanBase64.length;
+              // Estimate original size: base64 length * 3/4 (each 4 base64 chars = 3 original bytes)
+              const estimatedOriginalSizeMB = (base64Length * 3 / 4) / (1024 * 1024);
+              
+              if (base64Length > MAX_BASE64_LENGTH) {
+                if (process.env.NODE_ENV === 'development') {
+                  console.warn(`Image too large: ${estimatedOriginalSizeMB.toFixed(2)}MB (estimated original size), max 20MB. Removing image.`);
+                }
+                return null; // Remove image that's too large
+              }
+              
               // Return validated image
               return c;
             } 
@@ -446,6 +482,36 @@ export async function POST(req: Request) {
       Array.isArray(msg.content) && 
       msg.content.some((c: any) => c.type === 'image_url' && c.image_url?.url)
     );
+    
+    // Check for oversized images and return early error if found
+    for (const msg of validatedMessages) {
+      if (Array.isArray(msg.content)) {
+        for (const c of msg.content) {
+          if (c.type === 'image_url' && c.image_url?.url) {
+            const url = c.image_url.url;
+            if (url.startsWith('data:image/')) {
+              const dataUrlMatch = url.match(/^data:image\/([a-zA-Z0-9]+);base64,(.+)$/);
+              if (dataUrlMatch) {
+                const base64Data = dataUrlMatch[2];
+                const cleanBase64 = base64Data.replace(/\s/g, '');
+                const MAX_BASE64_LENGTH = 28 * 1024 * 1024; // 28MB
+                const estimatedOriginalSizeMB = (cleanBase64.length * 3 / 4) / (1024 * 1024);
+                
+                if (cleanBase64.length > MAX_BASE64_LENGTH) {
+                  return new Response(
+                    JSON.stringify({ 
+                      error: 'Image trop volumineuse',
+                      message: `L'image est trop grande (${estimatedOriginalSizeMB.toFixed(2)}MB). La taille maximale autorisée est de 20MB. Veuillez réduire la taille de l'image et réessayer.`,
+                    }),
+                    { status: 400, headers: { 'Content-Type': 'application/json' } }
+                  );
+                }
+              }
+            }
+          }
+        }
+      }
+    }
     
     // Use gpt-4o for vision support, gpt-4o-mini for text-only (cost optimization)
     const modelName = hasImagesInAnyMessage ? "gpt-4o" : "gpt-4o-mini";
