@@ -635,6 +635,12 @@ function AssistantContent() {
                 refreshTrigger={conversationListKey}
               />
             </SidebarContent>
+            <SidebarFooter className="border-t p-2 md:hidden">
+              <div className="flex flex-col gap-2 [&_button]:w-full">
+                <AdminLink />
+                <LogoutButton />
+              </div>
+            </SidebarFooter>
             <SidebarRail />
           </Sidebar>
           <SidebarInset>
@@ -650,7 +656,7 @@ function AssistantContent() {
                   </BreadcrumbItem>
                 </BreadcrumbList>
               </Breadcrumb>
-              <div className="ml-auto flex items-center gap-2">
+              <div className="ml-auto hidden items-center gap-2 md:flex">
                 <AdminLink />
                 <LogoutButton />
               </div>
